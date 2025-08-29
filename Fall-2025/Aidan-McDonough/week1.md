@@ -65,10 +65,10 @@ I am not currently stuck or blocked.
       - Limited physical registers  
     - PTX compiled to SASS is done by GPU drivers or stand-alone program called ptxas
       
-    - **AMD**
-      - GCN (Graphics Core Next, Southern Island):
-        - Uses HSAIL (virtual ISA)  
-        - Separate scalar and vector instructions (`s_` vs `v_`):
-          - Scalar: executes 1 value shared across threads  
-          - Vector: executes per-thread values  
-        - Full hardware ISA documents available
+  - **AMD**
+    - GCN (Graphics Core Next, Southern Island):
+    - Uses HSAIL (virtual ISA)
+    - Separate scalar and vector instructions (`s_` vs `v_`):
+      - Scalar: executes 1 value shared across threads  
+      - Vector: executes per-thread values  
+    - Full hardware ISA documents available
