@@ -8,20 +8,20 @@ I am not currently stuck or blocked.
 
 ### Chapter 1:
 
-- **Discrete GPU system**  
+**Discrete GPU system**  
   - Older: CPU orchestrates system memory to graphics memory  
   - New: Automated transfer of data from CPU to GPU memory by leveraging virtual memory  
 
-- **Integrated GPU system**  
+**Integrated GPU system**  
   - Share memory space but suffer cache-coherence problems  
 
-- **CPU-GPU Flow**
+**CPU-GPU Flow**
   - CPU initiates computation 
   - Driver takes CPU instructions and converts them into format for GPU  
     - This includes which program (kernel) to run, how many threads, where the input data is stored  
   - This is placed in a designated location in GPU memory -> CPU signals GPU to read this  
   - GPU runs kernel  
-- **Basic GPU architecture**
+**Basic GPU architecture**
   - GPU core:
     - Order of thousands of threads  
     - 1st-level instruction and data cache  
@@ -30,7 +30,7 @@ I am not currently stuck or blocked.
 
   - Multiple memory channels associated with last-level cache in memory partition, cores and partitions connected via on-chip interconnect network (crossbar)  
 
-- **Notes**
+**Notes**
   - Memory access can consume much more energy than computations  
   
   - Multithreading in GPU hides memory access latency  
@@ -51,7 +51,7 @@ I am not currently stuck or blocked.
    
 **Communication and Scratchpad**
   - Threads within CTA communicate via scratchpad memory (per compute core)
-  - Scratchpad → software-controlled cache
+  - Scratchpad -> software-controlled cache
   - Hardware cache can have frequent misses, programmer can use scratchpad to avoid this if data allows
   - One scratchpad per SM (Streaming Multiprocessor)
   - Thread block running on SM gets a portion of the scratchpad memory
