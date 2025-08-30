@@ -1,3 +1,6 @@
+State: Reading right now and not encountering any obstacle.
+About this: Chapter 1&2
+
 ## 1.1 THE LANDSCAPE OF COMPUTATION ACCELERATORS
 One key consequence is that clock frequencies now improve
  much more slowly as devices become smaller. To improve performance requires finding more
