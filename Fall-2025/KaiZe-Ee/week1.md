@@ -63,7 +63,7 @@ Explicit Statement: I am not currently stuck or blocked
   - Computational Kernel
     - Composed of thousands of threads
   - **SAXPY** - Ax + y (where x & y are vectors, A const)
-    - ![image](images\fig2_2.png "Figure 2.2")
+    - ![image](Fall-2025/KaiZe-Ee/images/fig2_2.png "Figure 2.2")
       - **why does global indicate running on GPU?**
       - Let: d -> device(GPU) & h -> host(CPU)
       - saxpy:
@@ -138,4 +138,5 @@ Explicit Statement: I am not currently stuck or blocked
         - Vector memory count
         - Local/global data store count
         - Register export count
+
       - Compiler|programmer inserts S_WAITCNT so wavefront waits until num. of ops drop below treshold
