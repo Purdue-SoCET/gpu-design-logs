@@ -1,3 +1,8 @@
+
+State: Everything is good and I don't need help right now.
+
+GOAL: Read Chapter 1 and 2 of the textbook. Notes below.
+
 Chapter 1
 
 | Point | About |
