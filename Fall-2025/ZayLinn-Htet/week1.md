@@ -13,12 +13,11 @@ Thursday (8/28/25):
 Friday (8/29/25):
     - First SoCET GPU Team Meeting to learn about the syllabus of VIP and Senior Design, and the upcoming projects
     - Had a short lesson on what GPUs are, how they work, and how they are different from CPUs
-
     - Started Reading Chapter 1 of General Purpose Graphics Processor Architecture textbook
+    
     - Reading Notes:
         - Book GPU on non-graphics application (ML)
         - GPU architecture improved through reducing instruction processing and reducing register file access
-
         - Discrete GPU has its own DRAM memory (NVIDIA, low latency for CPU and high throughput for GPU); Mobile/Integrated GPU shares memory with CPU (AMD, optimized for low poer)
         - Unified Memory: virtual memory that uses software to automatically transfer data from CPU mem to GPU mem
         - Kernel: code that will be run on GPU
@@ -32,12 +31,12 @@ Friday (8/29/25):
 
 Saturday (8/30/25):
     - Continued Readding Chapter 2 of GPGPA textbook
+    
         - CUDA and OpenCL has MIMD to make scalar threads
         - Warps/Wavefronts (SIMT): groups of scalar threads executed on GPU
         - On discrete GPU, CPU allocates mem for input data for GPU, then launch kernel
         - Computational GPU launches kernel immediately (many threads)
         - CUDA makes each loop iteration into a thread
-
         - CUDA Syntax:
         - 1) global function for operation
         - 2) In main, initiate variables, allocate memory, and calculate number of threads
