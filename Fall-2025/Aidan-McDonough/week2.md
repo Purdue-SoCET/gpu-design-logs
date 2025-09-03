@@ -116,5 +116,12 @@ Pipeline Circuits:
 
 **3.6 RESEARCH DIRECTIONS ON REGISTER FILE ARCHITECTURE**
 
-- 
+- Regsiter File:
+  - Large in GPUs due to wide- SIMD datapath and number of warps
+  - Mnimize area of register file by implementing via low-port count SRAM banks
+  - Accessing large register file consumes a high amount of dynamic energy
+  - Large size also contributes to high static power consumption
+
+- Hierarchical Register File:
+  - 
 
