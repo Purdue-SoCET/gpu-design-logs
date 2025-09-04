@@ -1,6 +1,9 @@
 # Week 2
 
-## Status
+
+## Status: 
+
+I am not currently stuck or blocked.
 
 ## Progress
 
