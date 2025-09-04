@@ -29,6 +29,7 @@ This section talks about the GPU instruction set architecture (ISA).
 
 ### Chapter 3
 This chapter zooms into the discovery on microarchitecture of the SIMT core itself.
+
 overview graph of the SIMT core: instruction and register data flow
 <div align="center">
 <img width="645" height="209" alt="1 2025-09-04 145401" src="https://github.com/user-attachments/assets/4fb810f2-44fa-425b-9023-2bcce1ecbcba" />
@@ -47,10 +48,33 @@ overview graph of the SIMT core: instruction and register data flow
 2.	In GPU, warp can be executed over several clock cycles. This can be achieved by clocking the function to achieve high performance while increasing energy consumption. There are 2 ways to increase clock frequency:
     1.  Pipeline execution
     2.  Increase pipeline depth     
-3.	Threads are working independently and individually. 
-4.	SIMT stack is a memory in SIMT core that can keep track of different paths that threads in a warp when they diverge at a branch jump such as if statement.
-5.	The SIMT stack employed by GPUs can handle both nested control flow and skipped computation. 
+3.	Threads are working independently and individually.
 
+Exampled code:
+<div align="center">
+<img width="600" height="467" alt="1 2025-09-04 160906" src="https://github.com/user-attachments/assets/b1433c12-17f2-418f-ba18-dce3dcbcc69b" />
+</div>
+
+Control Flow Graph (CFG) for Sampled code. 
+<div align="center">
+<img width="600" height="665" alt="1 2025-09-04 160917" src="https://github.com/user-attachments/assets/af71a7a3-5626-4fd7-a0c6-d3df41d66957" />
+</div>
+
+4.	SIMT stack is a memory in SIMT core that can keep track of different paths that threads in a warp when they diverge at a branch jump such as if statement.The SIMT stack employed by GPUs can handle both nested control flow and skipped computation. Since SIMT stack is a stack, so it follows the role LIFO. 
+    1.    We first get to the line A, which assign the SIMT masking 1111, so all masks are activated now.
+    2.    The rule is that we put the most active threads on teh stack first and then entry with fewer active threads, which means that the top of the stack is the one has more threads. We met the first divergence, which is B and F and B is put at the top of the stack.
+    3.    The old Next PC is updated from B to E. After that we met the second divergence which is C and D.
+
+5.    SIMT deadlock: The stack-based SIMT  can lead to a deadlock condition. There are several cases.
+        1.    When we access the same memory, only one thread will see the value of mutex but remaining will view as 1.
+        2.    There will be a circular dependecne between threads that introduces deadlock.
+
+6.    The way we solve is to use the convergence barriers, in this case, the scheduler can switch between groups of diverged threads.
+7.    Trade off on round-robin scheduling. We can schedule warps in a fixed and predetermined order. If the warp0 is busy and will cost hundreds of cycles, instead of waiting, the scheduler immediately calls warp 1. After we finish warp 10 as example, the warp0 might be finshed and will return the value to the register. However, the increasing number of warps per core increases the portion of chip area directly used for register file storage, since each thread have its own rigisters.  
+
+
+
+    
 
 
 
