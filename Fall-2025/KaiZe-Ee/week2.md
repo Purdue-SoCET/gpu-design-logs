@@ -29,7 +29,7 @@ Explicit Statement: I am not currently stuck or blocked
   - On-chip caches are still able to leverage spatial locality
     - **Adjacent** pixel operations<br><br>
 - Overall MicroArch: 
-  - ![image](images\fig3_1.png "Figure 3.1")
+  - ![image](images/fig3_1.png "Figure 3.1")
   - Ins fetch loop
     - Fetch
     - ICache
@@ -68,7 +68,7 @@ Explicit Statement: I am not currently stuck or blocked
       - Significant saving for complex control flow
     - Traditionally suppourted by CPU w/ predicate regs
   - Assume HW manages SIMT stack
-    - ![image](images\fig3_4.png "Figure 3.4")
+    - ![image](images/fig3_4.png "Figure 3.4")
       - A -> shows the control flow branching
       - B -> shows masking of threads in basic block execution
         - Important for reconvergence upon branching
@@ -84,14 +84,14 @@ Explicit Statement: I am not currently stuck or blocked
   - SIMT Stack can -> SIMT Deadlock
     - Handled with Independent Thread Scheduling
   - SIMT Deadlock (description)
-    - ![image](images\fig3_5.png "Figure 3.5")
+    - ![image](images/fig3_5.png "Figure 3.5")
     - 0 = lock free
     - atomicCAS == atom.global.cas (in PTX compare and swap)
     - atomicCAS(mutex, compare_val, update_val) -> return og val of mutex
       - serialization of mutex access due to atomicity
     - Since exchange can't be executued, no other thread can access mutex causing the deadlock. 
   - Stackless Branch Reconvergence
-    - ![image](images\fig3_6.png "Figure 3.6")
+    - ![image](images/fig3_6.png "Figure 3.6")
       - Barrier Participation Mask -> Tracks which thread in warp participate in a given convergence barrier
         - So it just saying all threads that are expected at a barrier
       - Barrier State
@@ -117,7 +117,7 @@ Explicit Statement: I am not currently stuck or blocked
     - Warp Split
       - When scheduler selects subset of threads with common PC and enable Thread Active Bit
   - (HIGH LEVEL OF STACKLESS) -> Allows scheduler to switch between groups of diverged threads
-    - ![image](images\fig3_10.png "Figure 3.10")
+    - ![image](images/fig3_10.png "Figure 3.10")
       - Interleaving stackless vs Blocked Stacked
 - 3.1.3 Warp Scheduling
   - Which order should warps be scheduled in? 
@@ -177,15 +177,15 @@ Explicit Statement: I am not currently stuck or blocked
 ## 3.3 Three Loop Approximation
 - Want to suppourt as many warps, but inhibited by read ports
 - Problem Cause
-  - ![image](images\fig3_12.png "Figure 3.12")
+  - ![image](images/fig3_12.png "Figure 3.12")
     - Register Read stage of the pipeline
     - Register file is broken in 4 banks, so 4 read/write ports
       - Arbirter can serve 4 instructions and passes infro to the next stage reg/latch
-  - ![image](images\fig3_13.png "Figure 3.13")
+  - ![image](images/fig3_13.png "Figure 3.13")
     - Start bottom left and move right (naive implementation)
   - 3.14 shows us that if access are not spread well across banks, it causes delays in value access
 - 3.3.1 Operand Collector
-  - ![image](images\fig3_15.png "Figure 3.15")
+  - ![image](images/fig3_15.png "Figure 3.15")
     - Staging register/latch is replaced with collector units
       - Each intruction is tied to collector unit in read register stage
       - Multiple collector units to overlap reading of source operands
@@ -293,5 +293,6 @@ Explicit Statement: I am not currently stuck or blocked
 
 
   
+
 
   
