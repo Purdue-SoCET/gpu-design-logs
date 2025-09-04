@@ -12,7 +12,7 @@ contained in on-chip caches, but caches can still help significantly
 with spatial locality between (ex) adjacent pixel operations.
 
 ![A diagram of a computer hardware system AI-generated content may be
-incorrect.](image4.pngpng){width="5.2363801399825025in"
+incorrect.](media/image4.png){width="5.2363801399825025in"
 height="1.6945319335083115in"}
 
 Instruction fetch includes the Fetch, I-Cache, Decode, I-Buffer.
@@ -39,7 +39,7 @@ Register access includes the Operand Collector, ALUs and Memory.
     -   Nested control flow is when one branch is dependent on another
 
 ![A diagram of a computer program AI-generated content may be
-incorrect.](image5.pngpng){width="5.8127985564304465in"
+incorrect.](media/image5.png){width="5.8127985564304465in"
 height="4.632182852143482in"}
 
 -   Serialization of execution is used by GPUs to "mask" the execution
@@ -58,7 +58,7 @@ height="4.632182852143482in"}
 -   **Below is roughly based on NVIDIA Volta architecture**
 
 ![A screenshot of a computer AI-generated content may be
-incorrect.](image6.pngpng){width="5.861411854768154in"
+incorrect.](media/image6.png){width="5.861411854768154in"
 height="5.81974300087489in"}
 
 -   Barrier Participation Mask is used to track which threads within a
@@ -80,7 +80,7 @@ height="5.81974300087489in"}
     have the same PC (next instruction)
 
 ![A screenshot of a diagram AI-generated content may be
-incorrect.](image7.pngpng){width="5.8127985564304465in"
+incorrect.](media/image7.png){width="5.8127985564304465in"
 height="4.840526027996501in"}
 
 3.1.3: Warp Scheduling
@@ -131,7 +131,7 @@ height="4.840526027996501in"}
     banks and is our third loop in our gpu scheduling scheme.
 
 ![A diagram of a microarchitecture AI-generated content may be
-incorrect.](image8.pngpng){width="5.840577427821522in"
+incorrect.](media/image8.png){width="5.840577427821522in"
 height="3.3612839020122482in"}
 
 3.3.1: Operand Collector
