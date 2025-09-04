@@ -117,11 +117,46 @@ Pipeline Circuits:
 **3.6 RESEARCH DIRECTIONS ON REGISTER FILE ARCHITECTURE**
 
 - Regsiter File:
+  - When swirching between warps, GPU use hardware warp schedulers and store registers on all hardware threads in on-chip register files.
   - Large in GPUs due to wide- SIMD datapath and number of warps
-  - Mnimize area of register file by implementing via low-port count SRAM banks
+  - Minimize area of register file by implementing via low-port count SRAM banks
   - Accessing large register file consumes a high amount of dynamic energy
   - Large size also contributes to high static power consumption
 
 - Hierarchical Register File:
-  - 
+  - Register File Cache (RFC) -> extention of main register file of GPU to reduce accesss frequency to main register file
+    - 70% of values produce by instructions are only read once 
+  - RFC allocates a new entry via FIFO for the destination operand of every instruction.
+  - Source operands that miss the RFC are not loaded onto the RFC
+  - Every value evicted isby default written back to main register file
+  - Extra bit in instruction coding to indicate if register has been read for the last time 
+  - A register that has been marked dead in the RFC will not be written back to main register file
+  - Two-level warp scheduler restricts execution to only a small pool of active warps (4 to 8 out of 32) for each SIMT core -> RFC only holds values from active warps making it smaller
+  - Warp is removed from active pool with long latency operations (global memory loads, texture fetches) -> RFC entries of warp are flushed
+  - Last Result File (LRF) -> buffers the reigerter value produced by last instruction of each active warp
+  - Operand register File (ORF) -> compiler-timer time managed
 
+- Drowsy State Register File:
+  - tri-modal register file -> on, off, drowsy
+  - drowsy retains values but needs to be rewoken to access
+ 
+- Register File Virtualization:
+  - 60% of registers go unused while waiting for memory ops allowing:
+    - smaller physical register files
+    - doubling thread concurrency
+    - registers allocated only when needed
+  - Spilling register to memory (50% reduction) increases execution time by 73%
+
+    
+- Partitioned Register File
+  - Pilot register file (PRF) contains:
+    - Fast (FRF) -> Regular SRAM, small, 4 entries per warp
+    - Slow (SRF) -> near threshould voltage SRAM, much larger, lower energy but higher latency
+  - Operand collector hides SRF latency
+  - Registers are fixed partitioned for warp lifetime
+  - 
+- Regless:
+  - Replaces register file with operand staging unit (OSU) backed by memory
+  - Compiler divides kernel execution into regions with bounded live registers
+  - Capacity Manager (CM): preloads registers from memory into OSU when warp enters a region
+  
