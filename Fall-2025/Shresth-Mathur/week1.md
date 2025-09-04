@@ -1,6 +1,3 @@
-# **Status**
-I am currently not stuck or blocked
-
 # **GPU Notes Shresth Mathur**
 
 Taken on *General-Purpose Graphics Processor Architectures* by Tor Aamodt, Wilson Fung, and Timothy Rogers \- 2018
@@ -184,6 +181,273 @@ Figure 8: low-level SASS code corresponding to compute kernel in Figure 5
 * I will omit details about SASS since there is not too much documentation on it  
   * For more information about hardware-level assembly for GPUs, check out AMD’s fully-documented lower-level ISA: **Southern Islands Series ISA**  
     * [Southern Islands Series Instruction Set Architecture | AMD](https://www.amd.com/content/dam/amd/en/documents/radeon-tech-docs/instruction-set-architectures/southern-islands-instruction-set-architecture.pdf)
+
+# **Chapter 3: The SIMT Core: Instruction & Register Dataflow**
+
+* In their traditional graphics-rendering role, GPUs access data sets like detailed texture maps that are too large to be fully cached on-chip  
+* To enable high-performance programmability, it is necessary to employ an architecture that can sustain **large off-chip bandwidths**  
+  * This allows modern GPUs to execute thousands of threads concurrently  
+* While the amount of on-chip memory per thread is small, caches can still be effective  
+  * For example, in graphics workloads, there is significant spatial locality between adjacent pixel operations that can be captured by on-chip caches
+
+![][image10]  
+Figure 9: generic microarchitecture of a GPGPU core
+
+* The pipeline can be divided into a **SIMT front-end** and a **SIMD back-end**  
+* The pipeline consists of **3 “scheduling loops”**  
+  * **Instruction fetch loop** (SIMT front end)  
+    * Fetch, I-Cache, Decode, I-Buffer  
+  * **Instruction issue loop** (SIMT front end)  
+    * I-Buffer, Scoreboard, Issue, SIMT Stack  
+  * **Register access scheduling loop** (SIMD back end)  
+    * Operand Collector, ALU, Memory  
+* We will start with a high-level view of the overall GPU pipeline and then fill in details – we call these increasingly accurate descriptions “approximations” as not all the details of GPUs are readily available to the public  
+* This chapter will cover the above listed 3 “approximation loops” (fetch, issue, register acc.) by starting with one scheduler, then two, and then finally three
+
+One-Loop Approximation \- Single Scheduler:
+
+* **Scheduler:** In the context of GPUs, a scheduler is a hardware unit responsible for managing the execution of warps across all available compute units – crucial for high throughput  
+* In each cycle, the scheduler selects a warp for scheduling  
+* In the one-loop approximation, the warp’s PC is used to access an instruction memory to find the next instruction to execute for the warp  
+* After fetching an instruction, it is decoded and source operand registers are fetched from the register file  
+* In parallel with fetching source operands from the register file, the **SIMT execution mask values** are determined  
+  * The SIMT execution mask determines which threads are active and which are inactive (if, say, some threads go down an ‘if’ block and others go down the ‘else’)  
+* After the execution masks and source registers are available, execution proceeds in single-instruction, multiple-data manner  
+* Each thread executes on the function unit associated with a lane provided the SIMT execution mask is set  
+* NVIDIA GPUs contain **special function units (SFU)**, **load/store units, floating point function units**, **integer function units**, and, as of Volta, a **Tensor Core** (mainly for ML)  
+  * All function units nominally contain as many lanes as there are threads within a warp, but implementations vary (pipeline, increased clock speed, etc.)  
+    
+
+SIMT Execution Masking/SIMT Stack:
+
+* A key feature of modern GPUs is the SIMT execution model gives the abstraction that threads execute individually, which can be achieved via predication alone, but that is NOT how modern GPUs work  
+* In modern GPUs, a mix of traditional predication (true or false) along with a stack of predicate masks, the SIMT stack, is used  
+  * The SIMT stack handles two key issues that occur when all threads can execute independently  
+    * **Nested control flow**: one branch is control dependant upon another  
+    * **Skipping computation entirely while all threads in a warp avoid a control flow path**
+
+![][image11]  
+Figure 8: Example CUDA C source code for illustrating SIMT stack operation
+
+* Figure 8 shows an example of code that would cause **control flow divergence** in a GPU  
+  * All threads would be executing in lockstep up until the first conditional statement  
+  * At the conditional, some threads may take the ‘if’ path (B) and others may take the ‘else’ path (F)  
+    * Leading question: **how do we reconverge all the threads?**
+
+**![][image12]**  
+Figure 9: example of SIMT stack operation (TOS: top of stack)
+
+* (a) in Figure 9 shows the active mask as a program executes through conditionals  
+  * Each bit represents a thread – upon a branch, any threads that take a certain route will be logic 1 and the ones that didn’t take that branch will be logic 0  
+    * If a thread is 1, it means it should execute the instruction that it is on; if it is 0, it means it should NOT execute the instruction that it is on  
+  * We call the reconvergence point the **immediate post-dominator**  
+* (b) shows that the threads do not execute at the same time, they must be **serialized**  
+  * At instruction A, all threads are active, but in the next cycle only 3/4 threads are active (typically the majority path), then 1/4, then 2/4, 3/4, and then the immediate post-dominator of B is reached; then the final thread at instruction F will execute, which leads the to the immediate post-dominator of A to be reached, G  
+* A **reconvergence point** (post dominator) is a location in the program where threads that diverge can be forced to continue executing in lock-step  
+  * The nearest reconvergence point is usually preferred so we can do the most work  
+* Interesting question: what order should be used to add entries to the stack following a divergent branch?  
+* (d) shows the SIMT stack and how it handles the branches  
+  * The TOS marker tells us which point we want to start at, and when that frame is popped we move on to the frame directly above it  
+  * In the initial state, the TOS next PC is B, so we visit B first  
+    * At B, the TOS next PC is C then D, meaning that the nested flows are computed before we can move onto the reconvergence point instruction, E
+
+SIMT Deadlock:
+
+* Since the release of the NVIDIA Volta GPU architecture, NVIDIA has stopped using the SIMT stack and moved towards a stackless SIMT architecture  
+  * Why? **SIMT Deadlock**
+
+**![][image13]**  
+Figure 10: SIMT deadlock example
+
+* SIMT deadlock problem:   
+  * Figure 10 shows a classic SIMT deadlock example using the instruction atomicCAS  
+    * Atomic instructions work differently than normal instructions in the sense that threads executing that instruction must be serialized  
+      * Only one thread has access to the lock at a time (intended, no?)  
+    * In line A, all threads are moving in lockstep (writing to same memory location is fine)  
+    * Then, the while loop (line B) basically tells each thread to wait until the mutex lock is available (i.e. one thread gets out of while loop, all others stay)  
+    * **This will cause a SIMT deadlock…why??**  
+      * If B is the entry point, and C is the reconvergence point (control flow divergence at instruction B), **the first thread that was able to execute instruction B will wait for the rest of the threads before executing instruction C, but** **instruction B cannot be executed without removing the mutex lock which is done on instruction C**  
+        * **Cyclic dependency** \-\> previous instruction cannot be executed because a later instruction cannot be executed due to the nature of the SIMT stack
+
+Deadlock Solution? Stackless SIMT Architecture:
+
+![][image14]  
+Figure 11: Alternate stackless convergence barrier based branch divergence handling mechanism
+
+* **Barrier Participation Masks** tracks which threads within a warp participate in a given **convergence barrier** (may be more than one due to nested control flow)  
+  * Basically, it holds information on which threads we need to wait for  
+* **Barrier State Field** tracks which threads have reached the reconvergence point  
+* **Thread State** tracks whether a thread in a warp is ready to execute, blocked at a convergence barrier (and if so, which one), or has **yielded**  
+  * It *appears* the yielded state is used to enable other threads in the warp to make forward progress past convergence barrier in the case of deadlock (like Figure 10\)  
+* Since we don’t know how the yield mechanism fully works, we won’t speculate  
+  * Just know that it deals with the issue described in Figure 10
+
+![][image15]  
+Figure 11: Code example for convergence barrier divergence handling mechanism
+
+* Figure 11 shows a code example for the mechanisms described in Figure 10 and below  
+* A special ‘ADD’ instruction is used to add branches to a reconvergence point (LABEL0)  
+  * Code block 510 and 512 both contain this special instruction because they are divergence points (conditional branches)  
+* A special ‘WAIT’ instruction is used to tell serialized threads (which occur upon branches) to wait for the rest of the threads to reach that point to move on (code block 516 and 518\)
+
+![][image16]  
+Figure 12: Behavior of stack-based reconvergence threads (look at Figure 9\)
+
+![][image17]  
+Figure 13: Behavior of stackless reconvergence threads (look at Figure 11\)
+
+* ‘\_\_syncwarp()’ is a special function used in stackless reconvergence cores, which allows all the threads to execute in lockstep for the first time after divergence  
+  * Only difference between code of stack and stackless SIMT cores  
+* Stackless SIMT architecture is better because if there is a control path that relies on long latency memory access, then none of the threads can move on until that code runs, but in the stackless architecture, we simply switch to a different group of threads and allow them to execute, allowing for a more even distribution of work across different control paths  
+* How do we decide which warps we execute first though?
+
+Warp Scheduling:
+
+* We assume that each warp only executes a single instruction for all its threads and that it cannot execute another instruction until the first has completed  
+* Scheduling tradeoffs:  
+  * Letting different threads to execute/interleave instead of just one can be beneficial if the threads access the same memory locations since this increases cache hit rate  
+  * However, if we have disjoint data sets in which threads are NOT accessing the same memory locations, allowing one thread to fully execute would be beneficial for cache hit rates
+
+Two-Loop Approximation \- Two Schedulers:
+
+* Having two schedulers will enable us to issue subsequent instructions even when the first instruction hasn’t finished executing  
+* This was not possible in the single-loop approximation because the scheduling logic only had access to the thread identifier and the address of the next instruction to issue  
+  * Specifically, it **didn’t know whether the next instruction to issue for the warp has a dependency upon an earlier instruction**  
+    * Solution: **instruction buffer** after cache access  
+      * Separate scheduler used to decide which of several instructions in the buffer should be issued next to the rest of the pipeline  
+      * But how do we detect data dependencies between instructions in the same warp?  
+        * **Scoreboard**  
+* Scoreboard: in single-threaded CPU design, a scoreboard is used to detect dependencies  
+  * It does this by assigning each register to a bit, and that bit is set whenever an instruction wants to read or write to that register  
+  * After that instruction has executed, the bit for that register is unticked, and any instruction that was previously stalled due to the scoreboard can proceed  
+    * For in-order execution, this prevents RAW, WAW, and WAR hazards  
+* Since the scoreboard design is simple and takes up the least space, GPUs use it, but there are still challenges:  
+  * Challenge \#1: With up to 128 registers per warp and up to 64 warps per core, a total of **8192 bits** per core is required to implement the scoreboard  
+  * Challenge \#2: repeated lookups are part of the scoreboard implementation, but with in-order multithreaded instructions from 64 warps per core and up to 4 operands allowing all warps to probe the scoreboard every cycle would require **256 read ports**, which is very expensive  
+* How GPUs make it work:   
+  * Instead of having one bit per register per warp, the modified scoreboard will only contain around 3-4 entries, where each entry is the identifier of a register that will be written by an instruction that was issued but not done executing  
+  * A regular scoreboard looks up an index when instructions issue and write back, but the modified scoreboard is accessed when an instruction is placed in the instruction buffer and when it writes back  
+    * When an instruction is placed in the instruction buffer, the scoreboard entries for the corresponding warp are compared against that instruction’s source and destination registers  
+    * This results in a short bit-vector (3-4 bits) with 1 bit for each entry in the scoreboard per warp, which tells us if there’s a dependency  
+    * The bit vector is copied alongside the instruction into the buffer, and is not cleared to be executed until all the bits in the vector are 0  
+    * If all entries are used up for a given warp, either fetch stalls OR discard the instruction and re-fetch it later  
+* **Summary of two-loop architecture:**  
+  * The first loop selects a warp that has space in the instruction buffer, looks up its PC and performs an icache access to get the next instruction  
+  * The second loop selects an instruction in the instruction buffer that has no outstanding dependencies (using the bit vector) and issues it to the execution units
+
+Three-Loop Approximation \- Three Schedulers:
+
+* **The issue:** operations that require long latencies to finish executing need to be masked by executing another warp in the meantime  
+  * **Context switching:**  
+    * Occurs when we switch from executing one warp to another  
+    * Downside is that we need a **massive register file** that contains **separate physical registers for** **every warp that is executing**  
+        
+* **Naive fix:** reduce size of register file by using multiple banks of single-ported memory
+
+![][image18]  
+Figure 14: Naive banked register file microarchitecture
+
+![][image19]  
+Figure 15: Timing of naive banked register file (EU is execution unit)
+
+* Figure 15 shows why this naive implementation of register banks is harmful to performance (note that execution starts one cycle after all req. registers are read)  
+  * r0 maps to bank 0, r1 to bank 1, and so forth; r4 maps to bank 0 because of **wrap-around (mod \[%\] 4 op)**  
+  * If all the registers map to the same bank, then the issue in Figure 15 becomes clear  
+    * In Figure 15, cycle 2, r5 and r1 both map to bank 1, but since only one operand can enter, the pipeline must be stalled until r1 is read  
+      * This hurts throughput  
+          
+* **Better fix – Operand Collector:**
+
+**![][image20]**  
+Figure 16: Operand collector microarchitecture
+
+* The key change in this architecture is that we’ve replaced the staging registers with **collector units**  
+* Each instruction is allocated a collector unit when it enters the register read stage  
+* There are multiple collector units so that multiple instructions can overlap reading of source operands, increasing throughput in the presence of bank conflicts (Figure 15\)  
+* Given the larger number of source operands for multiple instructions, the arbiter is more likely to achieve higher bank-level parallelism to allow accessing multiple banks in parallel  
+* The operand collector uses scheduling to tolerate bank conflicts when they occur
+
+![][image21]![][image22]  
+Figure 17: Timing of operand collector
+
+* Figure 17 shows how many fewer stalls there need to be with this new architecture  
+* Banks can be utilized far better than they previously were with a simple modulo hash  
+* Still, the operand collector has an **issue**: because it does not impose any order between when different instructions are ready to issue, it may allow **WAR hazards**  
+  * If the first instruction runs into bank conflicts and a later instruction does not, the later instruction may be issued before the previous one, leading to a WAR hazard  
+    * Solution 1: release-on-commit warpboard, allows 0 or 1 instruction per warp to be executing at a time  
+    * Solution 2: release-on-read warpboard, allows only 1 instruction per warp to be collecting operands in the operand collector at a time  
+    * Solution 3: Bloomboard mechanism, uses a small bloom filter (probabilistic operator to determine if an element is of a particular set) to track outstanding register reads  
+      * This one is the quickest, but also allows for **false positives** (not always correct)  
+    * Solution 4: read dependency barrier, which is managed by special “control instructions”  
+      
+
+Instruction Replay: Handling Structural Hazards
+
+* One memory instruction may need to be broken into multiple separate operations  
+* Register read stage may run out of operand collector units  
+* **How do we handle structural hazards in the GPU pipeline?**  
+  * Easy fix: stall instructions until resource becomes available  
+    * Downsides:   
+      * Stalling increases the critical path  
+      * Stalling an instruction in 1 warp may cause instructions from other warps to stall behind it  
+  * Better fix: **instruction replay**  
+    * What is it: instructions are held in the instruction buffer either until they have completed or all individual portions of the instruction have executed  
+    * Why it’s good:  
+      * Avoids clogging the pipeline  
+      * Avoids using greater circuit area and/or timing overheads from stall
+
+Summary of the 3 Approximations:
+
+* First loop: scheduling loop where we picked an instruction from a warp  
+* Second loop: scheduling loop where we ran instructions out of order by tracking dependencies  
+* Third loop: scheduling accesses to the register file
+
+# **Chapter 4: Memory Subsystem**
+
+#### 4.1 First-Level Memory Structures
+
+* Scratchpad Memory and L1 Data Cache  
+  * Explores the design and utilization of scratchpad memory (also known as shared memory) alongside the L1 data cache, highlighting their roles in facilitating low-latency data access for threads within a warp.  
+* L1 Texture Cache  
+  * Discusses the specialized L1 texture cache, optimized for texture fetching operations, and its impact on memory bandwidth and latency.  
+* Unified Texture and Data Cache  
+  * Examines architectures that unify texture and data caches to improve resource utilization and simplify memory hierarchies
+
+#### 4.2 On-Chip Interconnection Network
+
+* Analyzes the on-chip networks that interconnect various GPU components, focusing on their topology, bandwidth, and latency characteristics, which are crucial for efficient data movement.​
+
+#### 4.3 Memory Partition Unit
+
+* L2 Cache  
+  * Details the structure and function of the L2 cache, which serves as a shared cache among multiple streaming multiprocessors (SMs), and its role in reducing off-chip memory accesses.  
+* Atomic Operations  
+  * Covers the implementation of atomic operations within the memory hierarchy, essential for synchronization and data consistency in parallel programs.  
+* Memory Access Scheduler  
+  * Describes the scheduling mechanisms that manage memory requests, aiming to optimize throughput and fairness among concurrent threads.​
+
+#### 4.4 Research Directions for GPU Memory Systems
+
+* Memory Access Scheduling and Interconnection Network Design  
+  * Investigates advanced scheduling algorithms and network designs to alleviate contention and improve data transfer efficiency.  
+* Caching Effectiveness  
+  * Explores strategies to enhance cache utilization, including cache coherence protocols and replacement policies tailored for GPU workloads.  
+* Memory Request Prioritization and Cache Bypassing  
+  * Discusses techniques to prioritize critical memory requests and selectively bypass caches to reduce latency and prevent cache pollution.  
+* Exploiting Inter-Warp Heterogeneity  
+  * Examines methods to leverage differences in warp behavior to optimize memory access patterns and resource allocation.  
+* Coordinated Cache Bypassing  
+  * Looks into coordinated approaches for cache bypassing across multiple warps or thread blocks to improve overall performance.  
+* Adaptive Cache Management  
+  * Considers dynamic cache management techniques that adjust to workload characteristics in real-time.  
+* Cache Prioritization  
+  * Analyzes policies for prioritizing cache access among competing threads or data types to enhance performance.  
+* Virtual Memory Page Placement  
+  * Studies the impact of virtual memory systems on GPU performance, focusing on page placement strategies that minimize latency.  
+* Data Placement  
+  * Investigates optimal data placement within the memory hierarchy to balance load and reduce access times.  
+* Multi-Chip-Module GPUs  
+  * Explores the architectural considerations and challenges associated with GPUs composed of multiple interconnected chips, particularly concerning memory coherence and communication.
 
 [image1]: <data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAh4AAAD1CAYAAAAf3/wiAAA1l0lEQVR4Xu2dCbhV0+O/IyoyZZ4TReZ5yDyEZC5DMiSSMmYuhDKWWRolU2ZCJJnJkHyNiRChMoQURajW//cud+3/vuuee+659+51Ovucz/s8+7nnrD2cfddew7uGvXcdI4QQQgiRJ+r4AUIIIYQQoZB4CCGEECJvSDyEEEIIkTckHkIIIYTIGxIPIYQQQuQNiYcQQggh8obEQwghhBB5Q+IhhBBCiLwh8RBCCCFE3pB4CCGEECJvSDyEEEIIkTckHkIIIYTIGxIPIYQQQuQNiYcQQggh8sYiE49///3XHHHEEVpyXAqRAQMGVDhPLZmXQw45xI8+kTBt2rSpEO9atGip/hK6vFqk4iFy459//vGDCoLzzjvPDxKVoLgKzyqrrOIHCSFqQOjySuKRAiQe6UdxFR6JhxDJELq8knikAIlH+lFchUfiIUQyhC6vJB4pQOKRfhRX4ZF4CJEMocsriUcKkHikH8VVeCQeQiRD6PJK4pECJB7pR3EVHomHEMkQurySeKQAiUf6UVyFR+IhRDKELq8kHilA4pF+FFfhkXgIkQyhyyuJRwqQeKQfxVV4JB5CJEPo8ir14sFxvv766+j7aaedZho0aBDbIv0Uo3i0aNHCLr/99lsU1rlzZ7PCCiuYXXbZJbZl7fn7779NnTp1zBtvvOGvsvz888/m0UcfNQsXLvRXJUZt4krkhsRDiGQIXV6lXjxuu+02P8g0btzYD0o1xSYeCxYssNKRKQ0gHzvttJMfXGuyiceJJ55o13/xxRf+qsSoaVyJ3JF4CJEMocur1ItHp06d/CDz5Zdf+kE5M23aND9okVNs4tG1a1czffp0P9jy559/mr322ssPrjXZxGPWrFnmmWee8YMTpaZxJXKnOuJx6aWXaqnGUoj456il8qVPnz5+9GUldHmVevF46qmnzGWXXeYH1wi65GsjLaEoNvFYeuml/aByfPvtt35QrckmHvmgpnElcqc64jFu3Djz119/aclhee+99/zoKwj889RS+XLxxRf70ZeV0OVV6sUDqFRY9tlnH/PDDz/YsDvvvNOss846Zq211jINGza0YSuvvLJZd911zciRI83cuXNN27Ztbeubrn9a2gzRuGMdffTRdh+2a9SokWnZsqW9gMD2V1xxhZWUpk2bmjXXXNP+PwjQ4osvbk499VQzf/78/04uAYpJPGbMmGHjKBeYc/H555/beGU/rgP88ccfpkOHDqZ+/frmqKOOsmHE99NPP21uv/12s9xyy5mlllrKTJ48OToW1/T111+36WLJJZe019PBvuPHjzejRo2Kwth3s802MzfffLO93vDdd9+ZZs2amUceeSTaLldqEleielRHPAq1Mi1EPvroIz9IpAyJRxlJiodj7NixZoMNNrCVjGPzzTc3O++8s/187LHHRpUIrW7Xsp4zZ479yzDLL7/88t+O/8f1119vttxyS3PttdfaSatUmFQ+sPfee0fbUXHFK7kHHnjALLvsstH32lJM4jF79myzxBJL+MGWLl262AzCcsopp9gwxHD99dePtrnoootM79697WfivUmTJtG63XbbzfTo0cN+Rlp23HFHs99++9nvpIkxY8ZE2/7000+2h8ux3nrrWXGZOXOmldV58+bZcLYhzbz77rtmww03tL/J/1Dd9FuTuBLVQ+IRBolH+pF4lFHdgrsyJk2aVO47vRJx8Rg8eHD0PV7xXHDBBVYkhg4dGoX54kGldc0115TrsnK4lraDiszBHRK0uJOimMQDlllmGT8oYquttipXgSAamSabIhY33XRT1JsFXC8nHtCvXz+zySab2M/+UAs9WfRyOZx4PPvss1YwnKA6EA6EhF6WmhTENY0rkTsSjzDUJL2LwkLiUUZS4tGrVy8/qNztmFQwiy22mPnkk08qDH8wLBNvCWcSj27dukXf40g8ap44kbmJEyf6wZYddtjBVvCOTOLRvXt3O/zCkEu8x8MXD6TSTVTNVTy4dnXr1jW///57tM6B7HDnC0M1DP1Uh5rGlcgdiUcYJB7pR+JRRlLi0bFjRz/IrLbaauW+r7rqqmbPPfcsF3b22Wfbv7feeqs56aST7GcqFZ7p4KDF7OYVAKIyYcIE+1niUbvEyVwbN5wRZ7vttssqHgxj8awPIA0hDA5fPE4++eSoRytX8Zg6dartCWMuiAPheOWVVyLZIC198MEH0fpcqE1cidyQeIRB4pF+JB5lJCUeRxxxhLnyyivtfA0Wbh068sgjy21z3333leuSBwopekHY391CS2/HVVddZSsZBIShFbrqqYT69u1r53XQBc/tl61atbIPv6JSokIic/I/MSegf//+tks+KYpRPNq3b28n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rriiefHFF6Pvzz//vN3e3RV20003RescyAqTYbnTjF4QkQ4kHkIIISIYGmG4w/Hjjz9WmCCNeIwZMyb63qdPH/Prr79G35mPwVN8qyMe3CHG/BDHvvvuW24ydybxGDlypGnYsKHtWRHpQeIhhBDCwjwLJm8ylyIuCO6WcuZxMM8DgWAiJ58JYz4Ht563bt3a7LLLLnZYhCGQffbZx+y1115m0qRJdn/2YwiFiass1113XfQ7zPtgmIc5IIgMk0U5Nsfh1l0khHkmcfhdJMgPF4WNxEMIIYTl22+/tXeksPDZBxH48ssvo224ddxNKp02bZqdZPrzzz9H27vtWOe+8/RfnnvDkul3uEuFXhYH4sE+bMvxfbgzxs3zEOlA4iGEECKV0GvyyCOP+MGiwJF4CCGESBX0sjCc49/pItKBxEMIIUSqYD4IE1HdMI9IFxIPIYQQQuQNiYcQQggh8obEQwghhBB5Q+IhhBBCiLwh8RBCCCFE3pB4CCGEECJvSDyEEEIIkTckHkIIIYTIGxIPIYQQQuQNiYcQQggh8obEQwghhBB5Q+IhhBBCiLwh8RBCCCFE3pB4CCGEECJvSDyEEKII6du3r5YcF5FfJB5CCCGEyBsSDyGEEELkDYmHEEIIIfKGxEMIIYQQeUPiIYQQQoi8IfEQQgghRN6QeAghhBAib0g8hBBCCJE3JB5CCCGEyBsSDyGEEELkDYmHEEIIIfJG6sVjypQpflA5xo4da/bdd1+zcOFCf1U5XnvtNbP11lubffbZxzz33HPm559/9jcpKv7991/z5JNPmjvuuMNflZUFCxaYBx54wGy11Vbm+eef91cXLG+88YY59NBDzXrrrWfWWWcd06pVKzN//nwza9asaJt1113XrL766qZp06amefPmZs011zRvvfWW3e6vv/6y69dee22z+eabm9atW0f7sY5jsu+mm25qpk6dGq0TpcWYMWPMySefbH799Vdz9NFHmz///NPfxKaXDTbYwA+OaNKkidluu+1selprrbXM999/72+SWs4880yz/fbb+8EV6NGjh1l//fVtntt7773Nm2++aX755Re77u233zabbLKJjR/y6YYbbmjjqXv37nb9SSedZDbeeGO7nv3dftCzZ89ov/PPPz8KT5JOnTrZc8rGTz/9ZAYOHGi22WYbe45cc67znDlzbHkD3333nY0D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>
 
