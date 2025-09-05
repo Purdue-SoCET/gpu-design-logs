@@ -57,6 +57,70 @@ Not stuck or blocked.
 - This means that data dependency and structural hazards must be addressed
   - GPUs fetch instructions in advance and use an instruction buffer to pick instructions that do not have hazards with instructions currently in the pipeline
 
+- There are two common methods to detecting data dependencies:
+  - Scoreboard: can be used for OoO and in-order execution, however most GPUs use in-order scoreboards for their simplicity and inexepensive use
+    - Must limit the amount of entries in the scoreboard though, since there are so many threads in a warp
+    - Instructions are only allowed through the instruction buffer if all bits are cleared on the scoreboard for the operands used in the instruction
+  - Reservation Stations: require logic that takes up a lot of energy and area
+
+> Summary: First loop selects a warp that has space in the I-buffer. Second loop selects an instruction from the I-buffer that has no dependencies in the pipe and sends it to the execution units.
+
+### Three-Loop Approximation
+- To hide latencies from memory accesses, cores must support multiple warps and be able to switch between them quickly
+  - This requires a large register file to hold the state of all active warps
+    - To reduce the area of the RF, multiple banks of single-port SRAM modules are used
+    - To manage this, the operand collector module is used
+
+#### Operand Collector
+- In a simple implementation of a RF, there are a lot of conflicts when accessing operands when they are mapped to the same bank (since each bank only has one port)
+- To fix this operand collectors are used
+  - Instead of staging registers, collector units are implemented
+    - If two instructions use the same operand, they can both get this operand from the same collector unit
+      - This helps prevent some bank conflicts
+  - Scheduling is used to avoid other bank conflicts
+    - Avoiding bank conflicts is maximized by allocating equivalent registers from different warps in different banks
+    - This can lead to WAR hazards, but this can be prevented by requiring instructions from the same warp leave in program order
+
+#### Handling Structural Hazards
+- In simple CPUs, it is common to stall the pipeline when a structural hazard occurs until it is resolved
+  - This is undesirable for GPUs because of the high level of parallelism
+  - Instead, instruction replay is used by keeping instructions in the I-buffer until it is confirmed the instruction has finished executing
+
+### Register File Architecture
+> The RF is often the biggest power consumer of all the modules on a GPU. Thus, there is a lot of motivation to find out how to improve efficiency in the RF
+
+#### Hierarchical Register File
+
+- Implementing a Register File Cache (RFC) can greatly reduce usage of the RF, which saves some energy
+- Up to 70% of values are only read once, and only 10% are read more than twice in typical compute workloads
+  - Adding static lifetime information can allow the RFC to idenfify values that won't be read again
+    - This information can be leveraged to reduce RFC-to-RF writebacks by not writing back "dead" values
+
+#### Compile-Time Managed Register File Hierarchy
+- This method takes the static labeling of values even further by replacing the RFC with a Last Result File (LFC) and compile-tim managed operand file (ORF)
+  - The LFC buffers the value written back by the last instruction in each warp
+  - Buffered values are put in the ORF at compile-time
+
+#### Drowsy State Register File
+- This method utilizes different power states (ON, OFF, and DROWSY) to save power
+  - Register file banks not yet allocated are set to OFF
+  - Register file banks must be woken up from OFF or DROWSY
+  - Register file banks are set to ON when an access is needed, and then immediately set to DROWSY
+- This takes advantage of the long access delays to individual RF banks
+
+#### Register File Virtualization
+- This method claims that the RF size can be reduced, and main memory/caches can be used to store values that would previously be stored in the RF 
+- It also implements register lifetime analysis to figure out when registers can be reclaimed to store other values
+
+#### Partitioned Register File
+- This method implements the RF using two different SRAM technologies: near-threshold voltage (NVT) SRAMs for the slow register file (SRF), and regular SRAMs for the fast register file (FRF)
+- The SRF is much larger than the FRF, uses much less power, but access time are much longer than the FRF
+
+#### RegLess
+-  A study found that much of the RF goes unused during run-time
+- It proposes that instead, a operand staging buffer
+- The compiler splits up the kernel into regions to limit the number of live registers
+
 
 
 
