@@ -72,17 +72,39 @@ Control Flow Graph (CFG) for Sampled code.
 6.    The way we solve is to use the convergence barriers, in this case, the scheduler can switch between groups of diverged threads.
 7.    Trade off on round-robin scheduling. We can schedule warps in a fixed and predetermined order. If the warp0 is busy and will cost hundreds of cycles, instead of waiting, the scheduler immediately calls warp 1. After we finish warp 10 as example, the warp0 might be finshed and will return the value to the register. However, the increasing number of warps per core increases the portion of chip area directly used for register file storage, since each thread have its own rigisters.  
 
+### 3.2
 
+1.    Comparison between one loop model and two loop model: To decide if the warp can run, the scheduler should know if the next instruction has dependencies on older instructions (or currently running).
+2.    Solution: We cerate two loop.
+        1.    Loop 1: Fetch loop. The first loop selects a warp that has space in the instruction buffer and fetch the next instuction in I-cache.
+        2.    Loop 2: Issue loop. We select an insturction that has no dependencies and issues it to the execution units.
+3.    Workflow
+        1.    The instruction is fetched and was sent to the decode. The decode got the instruction and sent it to the I-Buffer, waiting to be executed. When the instruction arrived at the I-Buffer, we check the related registers (source or destination registors) if they are related to the "currently running" registers on the scoreboard. The result will be recorded as a dependency bit vector in I-Buffer.
+        2.   The issue scheduler checks the dependency bit vector to find out what instructions are waiting, so it can choose the dependency bits that are all clear.
+        3.    After we write back the final result to the register, the scoreboard will eliminate the busy flag for certain register and update to the I-buffer. 
 
-    
+### 3.3
+1.    Banks: Since we have massive number of registers in GPU, we need to break it down to small pieces, which is called bank.
+2.    However, when we have banks, if there is a case that an instruction that requires multiple source data from the same bank in a single cycle, there will be a bank conflict. So, at we have to wait until the second clock to get the data.
+3.    The third loop: Operand collctor. It is a stage that between Issue scheduler and the execution unit. Here is the steps follow.
+        1.    When an instruction is issued, we will assign it to a collector unit.
+        2.   Each collector unit contains buffering space for all source operands required
+ to execute an instruction.
+        3.   The arbiter is more likely to achieve increased bank-level parallelism to allow accessing multiple register file banks in parallel.
 
+<div align="center">
+Timing of naive banked register file with a bank conflict
+<img width="400" height="440" alt="1 2025-09-04 200839" src="https://github.com/user-attachments/assets/9ce710f5-e5c9-46ba-a2c2-6ccc620e5e10" />
 
+Timing of operaand collector
 
+<img width="400" height="469" alt="1 2025-09-04 200852" src="https://github.com/user-attachments/assets/234fd252-e520-4cfb-b4a7-e6275f5f13d2" />
+</div>
 
+### 3.6
+This section shows all the possible problems that caused by large GPU register file. Those are hierarchical register file, drowsy state register file, register file visualization, partitioned register file. And we find a solution to eliminate register file and replaced with operand staging unit (OSU). This is the idea of regless.
 
-
-
-## Questions
 
 ## Plan
+Learn more about the pipelining with related reading.
 
