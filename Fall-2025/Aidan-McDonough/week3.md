@@ -128,3 +128,49 @@ I am not currently stuck or blocked.
     - by caching only read-only data, GPU can reuse the existing texture cache hardware, with small tweaks
 
   ### On-Chip Interconection Network
+
+  - GPUs connect multiple DRAM chips in parallel via memory partition units to achieve larger memory bandwidth
+  - Address interleaving -> scheme for balancing traffic across memory partition units
+  - NVIDIA: Crossbar -> on-chip interconnection network for memory partitiion units
+  - AMD: ring network
+ 
+### Memory Partition Unit
+
+- Each memory partition unit contains L2 cache along with one or more frame buffers (memory access scheduluer)(FB) and raster operation unit (ROP)
+- Memory access scheduler reorders memory read and write operations to reduce overhead of accessing DRAM
+- The ROP unit is used in graphics operations
+  
+<img width="739" height="535" alt="image" src="https://github.com/user-attachments/assets/0c8e7c8e-bd08-44f9-afc0-76cd8e1a7f18" />
+
+**L2 Cache**
+- 2 slices: Each slice contains a seperate tag and data array and procces incoming requests
+- Matches DRAM atom size of 32 bytes -> each cache line inside the slice has 4 32 byte sectors
+- Cache lines can be used for load or storing
+- if a write completely replaces a sector (coalesced write), the cache skips reading old data from memory -> faster then typical CPU cache
+- when writes only partially cover a sector (uncoalesced write) -> possible approaches:
+    -  tracking valid bytes
+    -  skipping L2 cache
+
+**Atomic Operations**
+- ROP unit includes functions units for executing atmoic and reduction operations:
+    - atomic operation: thread safe update to shared data
+    - reduction operation: combining many values into one (sum, min, max, product, etc.) -> in parallel computing this means multiple threads contribute to same result
+- a sequence of atomic operations accessing the same memory location cna be pipelined
+
+**Memory Access Scheduler** 
+- GPUs use DRAM to store large amounts of data
+- DRAM uses capacitors:
+    - full row (page) is moved into the row buffer
+    - sense amp detects and amps 0 or 1 
+- Midigate DRAM overhead -> multiple banks, each with thier own row buffer -> overlap operations
+- Even so, switching between rows introducing latency -> multiple access schedulers reorders requests to reduce row switching
+- Each GPU memory partition may have multiple schedulers connecting its slice of L2 cache to DRAM
+- Schedulers handle reads and writes separately:
+    - read request sorter : to group reads targeting the same row in a bank, set-associative structure indexed by memory address, holds pointer
+    - read request store: second table accessed via pointer from sorter, contains actual list of read requests for that row, multiple requests to the same row combined
+    - other logic for write requests from L2
+ 
+### RESEARCH DIRECTIONS FOR GPU MEMORY SYSTEMS
+
+**MEMORY ACCESS SCHEDULING AND INTERCONNECTION NETWORK DESIGN**
+- 
