@@ -1,3 +1,6 @@
+# **Status**
+I am currently not stuck or blocked
+
 # **GPU Notes Shresth Mathur**
 
 Taken on *General-Purpose Graphics Processor Architectures* by Tor Aamodt, Wilson Fung, and Timothy Rogers \- 2018
