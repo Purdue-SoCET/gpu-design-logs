@@ -1,4 +1,4 @@
-# Design Log Week 1
+# Design Log Week 2
 
 ## Status
 
