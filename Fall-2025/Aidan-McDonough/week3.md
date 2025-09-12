@@ -173,4 +173,82 @@ I am not currently stuck or blocked.
 ### RESEARCH DIRECTIONS FOR GPU MEMORY SYSTEMS
 
 **MEMORY ACCESS SCHEDULING AND INTERCONNECTION NETWORK DESIGN**
-- 
+- Yuan (2009) : SM requests have row-buffer locality -> lost when mixed so proposed interconnect arbitration to preserve
+- Prioritize same SM -> same row-bank requests for simpler scheduler
+- Bakhoda (2010,2013): More SM -> need scalable interconnects (meshes)
+- Throughput insensitive to latency
+- many-to-few-to-many traffic patterns -> half-routers that reduce area
+
+**CACHING EFFECTIVENESS**
+- Bakhoda (2009): Adding L1/L2 caches in GPGPU-Sim showed mixed benefits across apps  
+- Jia (2012): Fermi GPU experiments confirmed cache usefulness depends on app  
+- L1 cache not sectored -> misses trigger larger 128 bytes off-chip accesses, harming bandwidth-limited apps  
+- Cache hit rate alone not reliable -> must consider traffic to L2 and memory partitions  
+- Locality taxonomy: within-warp, within-block, cross-instruction  
+- Compile-time algorithm proposed to infer when caching is beneficial based on locality types
+
+**MEMORY REQUEST PRIORITIZATION AND CACHE BYPASSING**
+- Jia (2014): Built on cache characterization and CCWS work  
+- Intra-warp contention: multiple requests from same warp map to one cache set -> associativity stalls and pipeline stalls  
+- Proposed bypassing L1 cache on a miss if no block can be allocated due to associativity stall  
+- Cross-warp contention: one warp evicts data fetched by another  
+- Introduced Memory Request Prioritization Buffer (MRPB) placed before L1  
+- MRPB: parallel FIFOs, requests assigned using warp ID signature  
+- Drain policy: fixed-priority scheme to select which FIFO feeds cache  
+- MRPB and bypassing -> about 4% geometric mean speedup over 64-way 16KB cache  
+- Showed better results than CCWS in some comparisons  
+- Rogers (2012) used more advanced set index hashing, reducing stalls  
+- Nugteren (2014): reverse-engineered NVIDIA Fermi -> XOR-based index hashing to reduce conflicts  
+- Jia (2014): approach is transparent to programmers, narrows performance gap between cache-based code and hand-optimized scratchpad code  
+- Arunkumar (2016): Studied bypassing + variable cache line size depending on memory divergence and reuse distance  
+- Lee & Wu (2016): Proposed runtime control-loop bypassing -> tracks reuse per instruction, bypasses when reuse too low
+
+**EXPLOITING INTER-WARP HETEROGENEITY**
+- Ausavarungnirun (2015): Proposed L2 and memory controller improvements to reduce latency divergence in irregular GPU apps  
+- Key idea: warps differ in cache hit/miss behavior -> classify warps as all-miss, mostly-miss, balanced, mostly-hit, all-hit  
+- All/mostly-hit warps stall on slowest access -> benefit if other warps bypass L2 to reduce queueing delay  
+- Four components:  
+  - Warp-type detection: classifies warps via dynamic hit ratio sampling  
+  - Warp-type-aware bypass: all/mostly-miss warps skip L2, go directly to DRAM  
+  - Warp-type-aware insertion: cache lines from mostly-miss warps placed at LRU, others at MRU  
+  - Warp-type-aware memory scheduler: two queues (high-priority for all/mostly-hit, low-priority for others)  
+- Effect: reduces L2 queuing delays, improves latency for hit-heavy warps, adapts to workload phase changes
+
+**COORDINATED CACHE BYPASSING**
+- Xie (2015): Profiling classifies loads as good, poor, or moderate locality -> good use L1, poor bypass, moderate decided adaptively  
+- Adaptive scheme works at thread block level, using an online threshold based on L1 hits and pipeline conflicts  
+- Approach improves cache hit rates more than static warp limiting  
+
+**ADAPTIVE CACHE MANAGEMENT**
+- Chen (2014b): Proposes combining warp throttling with cache bypassing for cache-sensitive GPU applications  
+- Runtime mechanism detects cache and memory contention, then coordinates the two policies  
+- Cache bypassing via protection distance: lines kept in cache for fixed accesses; if no unprotected lines remain, new requests bypass  
+- Workloads show performance improvement and are largely insensitive to the protection distance value
+
+**CACHE PRIORITIZATION**
+- Li (2015): Observed warp throttling improves L1 hit rate but underutilizes L2 and bandwidth  
+- Proposed token system: only token warps can allocate lines in L1; non-token warps execute but cannot evict data  
+- Optimization uses two knobs: total scheduled warps (W) and token warps (T) -> static tuning gives 17% gain over CCWS  
+- dynPCALMTLP: fixes W at max, samples T to maximize performance with less area than CCWS  
+- dynPCALCCWS: uses CCWS to set W, dynPCALMTLP to set T, then adjusts W dynamically -> 11% gain over CCWS  
+
+  **VIRTUAL MEMORY PAGE PLACEMENT**
+- Agarwal (2015): Studied systems with both bandwidth-optimized and capacity-optimized DRAM in heterogeneous CPU-GPU setups  
+- Found bandwidth-limited apps gain from using both memory types to increase aggregate bandwidth; latency-limited apps benefit less  
+- Optimal placement: allocate pages proportional to available bandwidth; simple random allocation proportional to bandwidth works well unless bandwidth memory capacity is insufficient  
+- When capacity is limited, refine placement by profiling access frequency; profile-guided hints via extended CUDA API achieve 90% of oracle performance  
+
+  **DATA PLACEMENT**
+- Chen (2014a): Proposed PORPLE, a portable GPU data placement framework with three parts: specification language, source-to-source compiler (PORPLE-C), and adaptive runtime placer  
+- Memory specification language: describes GPU memory types by serialization conditions (e.g., coalesced global vs serialized shared bank accesses) -> improves portability  
+- PORPLE-C: rewrites code into placement-agnostic form, inserting guards to select predicted best placement  
+- Placement decisions: use static analysis of access patterns; if uncertain, insert runtime tracing to profile patterns on CPU before kernel launch  
+- Prediction model: estimates transactions under serialization, uses reuse distance for cache hit rates, and partitions cache space linearly among arrays  
+
+  **MULTI-CHIP-MODULE GPUS**
+- Arunkumar (2017): Proposed scaling GPUs by combining smaller GPU modules in a multichip module, using local caching, locality-aware CTA scheduling, and first-touch page allocation  
+- Achieved 90% of ideal monolithic GPU performance, 45% better than the largest practical single-chip GPU in the same technology  
+
+  
+<img width="649" height="310" alt="image" src="https://github.com/user-attachments/assets/5b825d43-e7ca-4099-9246-0fd1b44efc00" />
+
