@@ -2,8 +2,7 @@ I am not currently stuck or blocked
 
 Week 4: 9/12/25 - 9/18/25 
 
-Sunday (9/14/25): 
-- Attended second GPU Team weekly meeting
+Sunday (9/14/25): GPU Team weekly meeting
 - Presented my presentation on Register File Virtualization with Jack and were asked thorough questions by the GTAs
 
 - A summary was given about the current architecture of the GPU
@@ -18,7 +17,7 @@ Sunday (9/14/25):
 - We decided as a team through look through PPCI sometime during the week before next Sunday's meeting
 
 
-Monday (9/15/25)
+Monday (9/15/25): Compilers Team & Sooraj Weekly Meet
 - Met with Compilers Team and Sooraj to talk more in detail about our goals
 - Understood importance of our role in connecting graphics and hardware
 - Took notes about Sooraj's explanation locally on my laptop, but that laptop has stopped working for the past few days (notes below are based on memory)
@@ -42,7 +41,7 @@ Monday (9/15/25)
 - Must revise presentation to have the details of today's meeting and what we learn from looking through ppci
 
 
-Thursday (9/18/25):
+Thursday (9/18/25): Learning PPCI
 - Started looking through ppci's website and Github
 - Viewed the Overview of the C Compiler page to familiarize myself with the syntax
 - Learned that preprocessor digests includes into texts which along with the file's tokens and the include files tokens goes into a parsed program, that takes these tokens and translates them, then generates the code appropiately
@@ -52,7 +51,7 @@ Thursday (9/18/25):
 - Browsed through the GitHub page of ppci to view the available compiling lanugagues
 - Noticed there were demo folders so tried out the execution for riscv, only to find out there were some issues when setting up, so I have to start the whole reinstalling processes again
 
-
+Thursday (9/18/25): SoCET Meeting
 - Attended SoCET Meeting today and listened to talks from Issac Hagedorn for MRAM and a short speech from TI senior fellow Al Griffin
 - Issac Hagedorn
 - center for secure microelectronics and polymorphic ecosystem
@@ -73,7 +72,8 @@ Thursday (9/18/25):
 - even if knew nothing about problem, just come in and learn it, even if never done it before
 - Created red team; process engineer to problem solving team; job in memory is to make sure bits don’t flip; mole supplier swapped ingredients with radioactive that made bits flip
 - even had psychologist cause so good at solving problems; try to always have some sort of materials class (if EE)
-
+- 
+Thursday (9/18/25): Reading Notes
 - Chapter 5.1 Notes
 - 5.1 Thread Scheduling
 - Threads fuse to form warps
