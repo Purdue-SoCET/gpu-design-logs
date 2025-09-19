@@ -1,6 +1,6 @@
 State: I am not stuck with anything, don't need help right now. 
 
-# Progress: 3.1-3.3 3.6
+# Progress:
 
 ## 3: The SIMT Core: Instruction and Register Data Flow
 * GPUs require high off-chip memory bandwith, as they are often dealing with to much data to store on file

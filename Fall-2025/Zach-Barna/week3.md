@@ -1,0 +1,330 @@
+# Explicit Statement: I am not stuck or blocked.
+# MIT Coursework Chapter 14: Caches and Memory Hierarchy
+- Memory technologies: Register, SRAM, DRAM, Flash, Hard Disk
+  - As we move from Hard Disk to Register, the cost increases, latency decreases, and storage decreases
+- SRAM: an array of memory locations where a memory access is either reading/writing ALL of the bits in that location
+- SRAM Cell:
+  - Two CMOS inverters forming a bistable circuit
+  - Two access transistors
+- SRAM Read: 
+  - 1.) Drivers precharge all bitlines to Vdd, and leave them floating
+  - 2.) Address decoderactivates one wordline (horizontal)
+  - 3.) Each cell in the activated wordline slowly pulls down one of the bitlines to GND
+  - 4.) Sense amps sense change in bitline voltages, producing output data
+- SRAM Write:
+  - 1.) Drivers set and hold bitlines to desired values
+  - 2.) Address decoders activate one wordline
+  - 3.) Each cell in the word is overpowered by drivers and stores value
+- *Bitline GND overpowers cell Vdd, but bitline Vdd does not overpower cell  GND for SRAM. This is to ensure a read does not cause write behavior.*
+- Multiported SRAM:
+  - SRAM can do either one read/write per cycle so far
+  - We can do multiple reads/writes with multiple ports by adding one set of wordlines, bitlines, drivers, and sense amps per port 
+  - Cost/bit for N ports:
+    - wordlines: N
+    - bitlines: 2N
+    - access FETs: 2N
+  - wires often dominate area -> O(N^2) area
+- SRAM uses 6 MOSFETS per bit cell, but can we do better, i.e., what is the minimum number of MOSFETs needed to store a single bit?
+- DRAM Cell:
+  - still has wordline/bitline as in SRAM
+  - one access FET
+  - one storage capacitor
+  - Good: ~20x smaller area than SRAM Cell -> Denser and cheaper
+  - Bad: Capcitor leaks charge, so must be refreshed periodically (~ms)
+- DRAM Writes/Reads:
+  - Writes: drive bitline to Vdd or GND, then activate wordline, and charge or discharge or capacitor
+  - Reads:
+    - 1.) Precharge bitline to Vdd/2
+    - 2.) Activate wordline
+    - 3.) Capacitor and bitline share charge, so if capacitor discharges, voltage goes down slightly, and if capacitor charges, voltage increases slightly
+    - 4.) Sense bitline to determine if 0 or 1
+- Problem with reads in DRAM:
+  - Reads are destructive since charge on the capacitor will be gone
+  - Data must be rewritten to cell at end of each read
+  - *First access to a row in DRAM has very long latency, but subsequent accesses to the same row in DRAM have very low/short latency.*
+- DRAM vs. SRAM:
+  - DRAM is ~20x denser than SRAM, good
+  - DRAM is ~2-10x slower than DRAM, bad
+- Issue with SRAM/DRAM: Since these memory technologies are volatile, when powered down, they will lose the data they were storing in memory.
+- Non-Volatile Flash Memory:
+  - Long-term storage achieved by storing charge on a well-insulated conductor called a floating gate
+  - We can store multiple bits on one flash cell by varying the amount of charge on the floating gate
+  - Pros: very dense - multiple bits/transistor, read and written in blocks
+  - Cons: 
+    - slow (especially on writes), 10-100 microseconds
+    - limited number of wires: charging/discharging the floating gates (writes) require large voltages that damage the transistor
+- Flash memory is the higher-performance, higher-cost replacement of hard disk drives
+- Hard disk:
+  - Cons:
+    - extremely slow (~10 ms), ~100 MB/s for sequential reads/writes, but ~100 KB/s for random reads/writes (not good)
+  - Pro: cheap
+- Memory Hierarchy Interface:
+  - Approach 1: Expose Hierarchy
+    - Registers, SRAM, DRAM, Flash, Disk each available storage alternatives
+    - Tell programmers to use them cleverly
+    - Programmer moves data into fast storage when necessary, then back to large, slower memories when low latency access is no longer required
+    - Data constantly in motion as focus of computation/program changes
+  - Approach 2: Hide Hierarchy
+    - Programming model: single memory, single address space
+    - Machine transparently stores data in fast or slow memory, depending on usage patterns
+    - Requires additional circuitry to determine where in hierarchy the requested data resides, as well as putting contiguous memory blocks in faster storage locations as we know they will be accessed more frequently than random memory locations
+- Locality Principle: 
+  - Keep most often-used data in small, fast SRAM (often local to CPU), and refer to main memory rarely for remaining data
+  - This works because of locality
+  - Locality of Reference: Access to address X at time t implies that access to address X + delta_X at time t + delta_t becomes more probable as delta_X and delta_t approach zero
+- S is the set of locations accessed during delta_t
+- Working set: a set S which charges slowly wrt access time
+- Working set size = |S|
+- If we can arrange SRAM to be large enough to hold the working set of the program, most accesses can be satisfied by SRAM
+- Occasionally, we will need to move new data into SRAM, and old data back into DRAM
+- However, DRAM acccesses will occur less often than SRAM accesses
+- Our goal here is to build a memory system with performance like SRAM, yet capacity of  DRAM
+- Caches (SRAM Component):
+  - A small, interim storage component that transparently retains data from recently accessed locations
+    - very fast access if data is cached (cache hit)
+    - otherwise accesses slower, large cache/memory if data is not cached (cache miss). If data is not in the cache, we must go to DRAM and store the data in the SRAM cache
+  - Often multiple levels of cache (typically L1, L2, L3)
+- Registers, Main Memory, Flash Drive, and Hard Disk managed by either software/compileror software/OS
+- However, L1-L3 caches are managed directly by the hardware
+- Cache Access:
+  - CPU send access to cache
+  - Two options:
+    - 1.) cache hit: data for address in cache, returned quickly
+    - 2.) cache miss: data not in cache
+      - fetch data from memory, send it back to processor
+      - retain this data in cache
+- Cache Metrics:
+  - Hit Ratio: HR = hits/(hits + misses) = 1 - MR
+  - Miss Ration: MR = misses/(hits + misses) = 1 - HR
+  - Average Memory Access Time (AMAT):
+    - AMAT = Hit Time + (Miss Ratio * Miss Penalty)
+    - Goal of caching is to improve AMAT
+    - Formula can be applied recursively to multi-level caches
+- *A combination of a data block and its associated address tag is called a cache line*
+- Basic Cache Algorithm:
+  - On reference to Mem[X]:
+    - Look for X among cache tags
+  - Hit: X = Tag(i), for some cache line i
+    - Read: return Data(i)
+    - Write: change Data(i), start write to Mem[X]
+  - Miss: X not found in tag of any cache line
+    - Replacement Selection: select some line k to hold Mem[X]
+    - Read: read Mem[X]
+      - Set Tag(k) = X, Data(k) = Mem[X]
+    - Write: start write to Mem[X]
+      - Set Tag(k) = X, Data(k) = New Mem[X]
+- Question: How do we search the cache?
+- Direct-Mapped Caches:
+  - Each word in memory maps into a single cache line
+    - Since there are more memory locations than cache lines, many addresses will be mapped to a single cache line, and the cache line can only hold data from one of those addresses at a time
+  - Access for cache with 2^w lilnes:
+    - Index into cache with W address bits (index bits)
+    - Read out valid bit, tag, and data
+    - If valid bit == 1 and tag matches upper address bits, cache  HIT
+  - The CPU can also request the valid bit for a cache line be cleared, which is called flushing the cache
+  - In a cache line for 32-bit address (4 bytes) and 8 entries in the cache, the bottom 2 bits are the offset bits since all the data is 4-byte aligned
+  - Then, we will use the next 3 bits as the index bits
+  - Nearby locations will have to be mapped to different cache lines because we need nearby locations to all be held in the cache at the same time to improve performance
+    - To do this, we will need to use the index bits to determine where the nearby locations' data will be stored in the cache
+  - The remaning bits of the address (27 bits) will be checked against the tag field of the cache, and if they match and the valid bit is 1, we have a cache hit, and the data field can be used to complete the data request
+  - Cache access time is the access time of the SRAM + the propagation delays of the comparator and the AND gate in this example
+  - Downside: For each CPU request, we are only looking in a single cache location to see if the location holds the data
+  - Now what about a 64-line direct mapped cache? 64 indexes, so 6 index bits
+  - Important: Part of the address  (the index bits) are encoded in the location of the cache itself  (the entry number/index)
+- Block Size and Cache Conflicts
+  - Number of data fields in each cache line is called the block size, and is always a power of 2
+  - Take advantage of locality: increase the block size
+  - In the example of a 4-block, 16-word DM (direct mapped) cache, we would have the bottom 4 bits be the block offset bits (16 bytes/block, so 16 total words of data), there would only be 2 index bits, since there are only 4 cache lines, and important to note that the valid bit is for the whole cache line, so either the entire 4-word block is present in the cache line, or it is not
+  - Larger block sizes:
+    - Take advantage of spatial locality
+    - Incur larger miss penalty since it takes longer to transfer the block into the cache
+    - Can increase the average hit time and miss rate
+  - Direct-Mapped Cache Problem: Conflict Misses
+    - Assume we fill a DM cache with multiple instruction addresses and corresponding data addresses
+    - Now, assume that the data addresses change for every instruction address mapped in the cache
+    - Instead of having 100% hit rate, we will now fall to a 0% hit rate
+    - So how do we fix this?
+    - Ans: Fully-Associative Cache
+- Fully-Associative Cache
+  - Opposite extreme: any address can be in any location
+    - No cache index, as each cache line has a tag comparator
+    - So, the tag of the address is now compared against the tag in every cache line
+    - Flexible (no conflict misses)
+    - Expensive: must compare tags of all entries in parallel to find match
+- N-way Set-Associative Cache
+  - Compromise between direct-mapped and fully associative caches
+  - Nomenclature:
+    - number of rows = number of sets
+    - number of columns = number of ways
+    - set size = number of ways = set associativity
+  - Compare all tags from all ways in parallel
+  - Any N-way cache can be seen as N direct mapped caches in parallel
+  - Associativity tradeoffs:
+    - More ways reduces conflict misses, but increases hit time
+  - When we have a cache miss with an associative cache, which cache line should be chosen to hold the data from memory?
+  - Our goal is to choose to replace the cache line that will minimize reduction of hit ratio in the future
+  - Optimal policy: Replace the block that is accessed further in the future (Belady's MIN)
+    - But obviously this is not possible
+  - Idea: Predict the future by looking at the past
+    - If a block has not been used recently, it's often less likely to be accessed in the near future (based on locality)
+  - Least Recently Used (LRU): Replace the block that was accessed furthest in the past
+    - Works well in practice, but requires us to keep an ordered list that comes with quite complex logic
+    - Caches often implement cheaper approximations of LRU instead of true LRU
+  - Other replacement strategies, but not great hit rates
+- Write Strategies for Caches:
+  - How should we handle memory writes in the cache? We will need to perform the writes back to memory, but when should this occur?
+  - Write-through cache: CPU writes are cached, but also written to main memory immediately (stalling CPU until write is complete). Memory always holds current contents
+    - Simple, but slow and wastes bandwith
+  - Write-behind: CPU writes are cached, writes to main memory may be buffered. CPU keeps executing while writes are completed in the background
+    - Faster, still uses lots of bandwidth
+  - Best strategy: Write-back:
+    - CPU writes are cached, but notwritten to main memory until we replace the block. Memory contents are "stale"
+      - Fastest, low bandwidth, but much more complex
+      - Commonly implemented in modern systems/CPUs
+  - We can optimize the amount of memory write backs we need to do using a dirty bit
+    - Whenever a cache line is selected for replacement, we only need to write its data back to main memory if the dirty bit is 1, indicating that the data held in that address in memory was changed in the cache and needs to be updated in memory
+
+# GPU Textbook Chapter 4: Memory System
+- Unlike CPUs that typically include two separate memory spaces (register file and main memory), modern GPUs logically subdivide memory further into local and global memory spaces
+- The local memory space is private per thread and typically used for register spilling while global memory is used for data structures shared among multiple threads
+- Modern GPUs also  implement a programmer managed scratchpad memory with shared access among threads that execute together in a CTA/thread block
+- By loading data into shared memory at once, they can overlap long latency off-chip memory accesses and avoid long latency accessesto memory while perfoming computation on the data (hence increasing performance and also saves energy)
+- Section 4.1 - First Level Memory Structures
+- Section 4.1.1 - Scratchpad Memory and L1 Data Cache
+  - Latency to access this shared memory space (scratchpad memory) is comparable to that of a register file
+  - When using this shared  memory beyond its limited capacity, we can run into bank conflicts
+  - A bank conflict arises when more than one thread accesses the same bank on a given cycle and the threads wish to access distinct locations in that bank
+  - L1 data cache maintains a subset of the global memory address space in the cache
+  - If all threads in a warp access locations that fall within a single L1 data cache block and that block is not present in the cache, then only a single request needs to be sent to lower level caches, these are called "coalesced" accesses
+  - If the threads within a warp access different cache blocks, then multiple memory accesses need to be generated, these are called "uncoalesced" accesses (how clever)
+  - We try to avoid both bank conflicts and uncoalesced accesses
+  - For shared memory accesses, the arbiter determines whether the requested addresses within the warp will cause bank conflicts. If the requested addresses would cause bank conflicts, the arbiter splits the request into two parts
+    - 1.) The first part includes addresses for a subset of threads in the warp which do not have bank conflicts; this part of the request is accepted by the arbiter for further processing by the cache
+    - 2.) The second part contains the addresses that cause bank conflicts with addresses in the first part; this part of the request is returned to the instruction pipeline and must be executed again, which is known as "instruction replay"
+  - The accepted portion of a shared memory request bypasses tag lookup inside the tag unit (since shared memory is DM)
+  - When accepting a shared memory load request, the arbiter schedules a writeback to the register file inside the instruction pipeline (latency of DM memory lookup is constant with no bank conflicts)
+  - Data is returned to the correct thread's lane for storage int the register file from the crossbar
+  - Only lanes corresponding to active threads in the warp will write a value to the register file
+  - If single-cycle latency for shared memory lookup, the replayed portion of the shared memory request can access the L1 cache arbiter one cycle after the previous accepted portion; but if the replayed portion encounter bank conflicts, it will be further divided into accepted and replayed portion, just as our original shared memory request was
+  - Tag unit will need to check whether data is present in the cache or not (only a subset of the global memory can be held in the L1 at a given time)
+  - Access to global memory is restricted to a single cache block per cycle
+  - Load/store unit computes mem addresses and applies coalescing rules to break a warp's memory accesses into invidual coalesced accesses, which are then fed to the arbiter, and the arbiter may reject a request if not enough resources are free
+  - If enough resources are free, the artbiter requests the instruction pipeline to schedule a writeback to the register file a fixed number of cycles in the future corresponding to a cache hit
+  - In parllel, arbiter also requests Tag unit to check whether access leads to a cache hit or miss
+  - If a cache hit, the corresponding row of the SRAM data array is accessed in all banks and is returning to the register file in the instruction pipeline
+  - Only register lanes corresponding to active threads are updated
+  - When accessing the Tag unit, if a request leads to a cache miss, the arbiter tells the load/store unit that it must replay the request and in parallel sends the request information to the PRT (pending request table)
+  - The PRT for data caches contain the block address of a cache miss along with information on the block offset and associate register that needs to be wrriten when the block is filled in the cache
+  - Multiple misses to the same block are supported by recording multiple block offsets and registes
+  - Our PRT supports merging two requests to the same block and records info needed to tell the instruction pipeline which deferred memory access to replay
+  - The L1 data cache in Figure 4.1 is virtually indexed and virtually tagged, unlike modern CPU architectures that typically deploy virtually indexed and physically tagged L1 data caches
+  - CPUs use this organization to avoid the overheads of flushing the L1 dcache on context switches (for either multicore and interrupts)
+  - Page-based VM is still beneficial in GPUs because it helps simplify memory allocation and reduces memory fragmentation (always good)
+  - After an entry is allocated in the PRT, a memory request is forwarded to the MMU for VA->PA translation, and from there is forwared over a crossbar to the correct memory partition unit
+  - This request will contain the PA, how many bytes to read, and a "subid" that is used to lookup the entry in PRT containing info on the request for when it returns to the core
+  - Once the request for the load is returned to the core, it is pased by the MMU to t he fill unit which will use the subid field to get info about the request, which includes info that can be passed by the fill unit to the load/store unit via the arbiter to reschedule the load, which will then guarantee to hit in the cache by locking the line in the cache after it has been placed into the SRAM data array (woah)
+  - The L1 dcache in Figure 4.1 can support both write-through and write-back policies, so store instructions (writes) to global memory can be handled in many ways
+  - The specific space the write is written to will determine whether the write is treated as write-through or write-back
+  - Accesses to  global memory in many GPGPU applications are expected to have very poor temporal locality (threads write out data to a large array right before exiting)
+  - For these accesses, a write-through with no write-allocate policy might make sense 
+  - In addition to this, local memory writes for spilling regs to the stack may show good locality with subsequent loads, so maybe a write-back with write-allocate polcy is better (**ask which one makes more sense/is more practical in modern GPU systems**)
+  - The data to be written to either shared or global mem is first placed in the WDB (write data buffer)
+  - If the block is present in the cache, then the data can be written to the SRAM data array via the crossbar
+  - If the data is not present in the cache, the block must first be read from the L2 cache or DRAM mem
+  - Coalesced writes which completely fill a cache block may bypass the cache if they invalidate tags for any stale data in the cache (**what does it mean to invalidate the tags? Does this just mean the tags differ?**)
+  - The cache org in Figure 4.1 does not support cache coherence
+  - To avoid the issues that arise without supporting cache coherence, NVIDIA implemented a mechanism that only permits local memory accesses for register spills and stack data, or read-only global memory data to be placed in the L1 dcache
+- Section 4.1.2 - L1 Texture Cache
+  - As adjacent pixels on the screen map to adjacent texels (fundamental unit of a texture map), and as it is common to average the values of nearby texels, there is significant locality in texture memory accesses that can be exploited by caches
+  - In contrast to the L1 dcache described above in section 4.1.1, the tag array and data array are separated by a FIFO buffer
+  - This FIFO buffer is used to hide the latency of miss requests that need to be serviced from DRAM
+  - The texture cache is designed assuming that cache misses will occur frequently and that the working set size is relatively small
+  - To keep the size of the tag and data arrays small, the tag array essentially runs ahead of the data array
+  - Both cache hits and misses experience roughly the same latency
+  - The texture cache in Figure 4.2 operates as follows: 
+    - Load/store unit sends the computed addresses for texels to perform a lookup in the tag array
+    - If the access is a cache hit, a pointer to the location of the data in the data array is placed in an entry at the end of the FIFO buffer along with any info needed to complete the texture operation
+    - When the entry reaches the head of the FIFO buffer, a controller uses the pointer to lookup the texel data from the data array and return that data to the texture filter unit
+    - In the event of a cache miss during tag lookup, the tag array sends a memory request via the miss request FIFO buffer
+    - The miss request FIFO buffer sends requests to lower levels of the memory system
+    - Then, to ensure the contents of the data array reflect the time-delayed state of the tag array, data must be returned from the memory system in order using a reorder buffer
+- Section 4.1.3 - Unified Texture and Data Cache
+  - In recent GPU archs, caching of data and texture values is performed using a unified L1 cache structure
+  - To accomplish this in a straightforward manner, only data values that are guaranteed to be read-only are cached in the L1
+  - For the read-only data, the texture cache hardware can be used with barely any modification except for changes to the addressing logic
+- Section 4.2 - On-Chip Interconnection Network
+  - To supply the large amount of memory bandwidth required for the SIMT cores, GPUs connect to multiple DRAM chipsin parallel via memory partition units
+  - Memory traffic is distributed amoung the memory partition units using address interleaving
+  - The SIMT cores connect to the memory partition units via an on-chip interconnection network, which is usually a crossbar in NVIDIA architectures 
+- Section 4.3 - Memory Partition unit
+  - Each memory partition unit contains a portion of the L2 cache along with one or more memory access schedulers, called a Frame Buffer (FB) and a Render Output Unit/Raster Operation Unit (ROP)
+  - L2 cache contains both graphics and compute data
+  - The memory access scheduler reorders memory read and write operations to reduce overheads of accessing DRAM
+- Section 4.3.1 - L2 Cache
+  - The L2 cache portion inside each memory partition is composed of two slices, where each slice contains separate tag and data arrays, and processes incoming requests in order
+  - Each cache line inside the slice has four 32-byte sectors
+  - Cache lines are allocated foruse either by load or store instructions
+  - To optimize throughput in the common case of coalesced writes that completely overwrite each sector on a write miss, no data is first read from memory, which is different from how CPU caches are commonly described in textbooks
+  - Two solutions to how uncoalesced writes, which do not completely cover a sector, are handled are storing byte-level valid bits and bypassing the L2 cache entirely
+  - To reduce area of the memory access scheduler, data that is being written tomemory is buffered in cache lines in the L2, while writes await scheduling
+- Section 4.3.2 - Atomic Operations
+  - The ROP unit includes a local ROP cache that can be used to pipeline a sequence of atomic operations accessing the same memory location
+  - These atomic operations are extremely useful for implementing synchronization across threads running in different thread blocks
+- Section 4.3.3 - Memory Access Scheduler
+  - To store large amounts of data, GPUs employ special DRAM (such as GDDR5)
+  - To read from the DRAM capacitors, a row of bits (called a page) is first read into a small memory structure called a row buffer
+  - The process of reading the values into the row buffer refreshes the values stored in the capacitors
+  - The precharge and activate operations introduce delays during which no data can be read or written to the DRAM array
+  - To mitigate these overheads, DRAMs contain multiple banks, each with their own row buffer
+  - However, even with multiple DRAM banks, it is often not possible to completely hide the latency of switching between rows when accessing data, which has led to the use of memory access schedulers that reorder DRAM memory access requests to reduce the number of times data must be moved between the row buffers and DRAM cells
+  - To enable access to DRAM, each memory partition in the GPU may contain multiple memory access schedulers connecting the portion of L2 cache it contains to off-chip DRAM
+  - The simplest approach for doing so would be for each slice of the L2 cache to have its own scheduler, where each scheduler contains separate logic for sorting read and write requests sent from the L2 cache
+- Section 4.4 - Research Directions for GPU Memory Systems
+- Section 4.4.1 - Memory Access Scheduling and Interconnection Network Design
+  - Memory requests from a single SM exhibit row-buffer locality, but this is reduced when mixed with requests from other SMs
+  - To preserve row-buffer locality, the idea of modifying the interconnect arbiter by prioritizing requests from either the same SM or with similar row-bank addresses is introduced
+  - Scalable topologies such as meshes are needed as SM counts grow
+  - Throughput is most unaffected by interconnect latency, and the idea of a cost-efficient "half-router" design that exploits the many-to-few-to-many traffic pattern of memory accesses is introduced
+- Section 4.4.2 - Caching Effectiveness
+  - GPU caching benefits some applications, but can hurt others, especially those using shared memory or those limited by memory bandwidth
+  - Cache hit rates along don't reliably predict performance, the effect on L2 and off-chip traffic must be considered since non-sectored L1 caches can increase memory traffic on misses
+  - Jia et al. classifies locality into within-warp, within-block, and cross-instruction, and propose a compile-time algorithm using this idea to determine when caching is beneficial and when it is not
+    - Within-warp locality: occurs when memory read accesses from a single load instruction executed by different threads within a single warp access the same cache block
+    - Within-block locality: occurs when memory read accesses from a single load instruction executed by threads in different warps from the same thread block access the same cache block
+    - Cross-instruction locality: occurs when memory read accesses from different load instructions executed by threads in the same thread block access the same cache block
+- Section 4.4.3 - Memory Request Prioritization and Cache Bypassing
+  - Two main sources of GPU cache contention: intra-warp contention, where threads in a warp map to the same cache set, and cross-warp contention, where warps evict each other's data
+  - 1.) L1 cache bypassing on associativity stalls and 2.) a memory request prioritization buffer (MRPB) that reorders requests by warp ID to improve locality are both proposed ideas, which will achieve solid performance gains over traditional caching
+- Section 4.4.4 - Exploiting Inter-Warp Heterogeneity
+  - The idea of Memory Divergence Conversion (MeDiC) is proposed, which is a set of L2 cache and memory controller techniques used to reduce latency divergence across warps
+  - MeDiC classifies warps by hit ratios on how they interact with the shared L2 cache: all-miss, mostly-miss, balanced, mostly-hit, all-hit
+  - L2 bypassing is used for miss-heavy warps to reduce queueing delays, inserting lines differently in the LRU stack to limit cache pollution, and prioritizing mostly/all-hit warps in the memory scheduler
+  - This mechanisms improve performance by tailoring cache and memory behavior to each warp's access patterns
+- Section 4.4.5 - Coordinated Cache Bypassing
+  - Explores the idea of selectively enabling cache bypassing for improving cache hit rates
+  - They deploy profiling to determine for each static load instruction in the GPGPU application whether it has good, poor, or moderate locality, and the instructions are marked accordingly
+  - Load operations with good locality are permitted to use the L1 data cache, load operations with poor locality are always bypassed, and load instructions with moderate locality follow an adaptive mechanism:
+    - operates at thread block granularity; for a given thread block, all moderate locality loads executed either use the L1 or bypass, which is determined at the time the thread blocks are launched based on L1 cache hits and pipeline resource conflicts
+- Section 4.4.6 - Adaptive Cache Management
+  - Proposes coordinated cache bypassing and warp throttling to improve performance on highly cache-sensitive applications
+  - The mechanism detects cache contention and memory resource contention at runtime, and coordinates throttling and bypassing policies accordingly
+  - Implements cache bypassing via protection distance, which prevents a cache line from being evicted for a number accesses
+  - When inserted into the cache, the cache line is given a protection distance and a counter to track the remaining protection distance on the cache line
+  - Once the remaining protection distance reaches 0, the cache line is no longer protected and can be evicted
+  - When a new memory request attempts to insert a new cache line into a set with no unprotected cache lines, the memory request bypasses the cache
+- Section 4.4.7 - Cache Prioritization
+  - Warp throttling improves L1 cache hit rates, but can underutilize other resources
+  - They propose a token system, where only "token warps" can allocate L1 cache lines, while "non-polluting warps" execute without evicting data from the L1 cache
+  - Fine-tuning both the number of active warps (W) and token warps (T) can improve performance beyond CCWS (Cache-Conscious Wavefront Scheduling)
+  - Two adaptive mechanisms: 
+    - 1.) dynPCALMTPLP: tries to find the best T while keeping W high
+    - 2.) dynPCALCCWS: combines CCWS-based warp selection with dynamic tuning of T and W (huh?)
+- Section 4.4.8 - Virtual Memory Page Replacement
+  - They study cache coherence in heterogeneous systems with both capcity and bandwidth-optimized memory
+  - For bandwidth-limited applications, using both memory types can boost performance, with optimal page placement being proportional to the available bandwidth
+- Section 4.4.9 - Data Placement
+  - yeah no idea what's going on here
+- Section 4.4.10 - Multi-Chip-Module GPUs
+  - Notes that the slowing of Moore's Law will result in slowing increases in GPU performance
+  - They propose to extend performance scaling by building large GPUs out of smaller GPU modules on a multichip module
+  - With proper mechanisms, this multi-chip module attains 45% better performance than possible using the largest implementable monolithic GPU with the same process technology
