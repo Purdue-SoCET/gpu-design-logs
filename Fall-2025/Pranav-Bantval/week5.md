@@ -19,10 +19,10 @@ To go from C to RISCV:
 To go from C to IR
 ```ppci cc --ir -o [outputfile].ir -m riscv [filename].c```
 
-## custom instruction procedure
-1. Decided on instruction encoding/format in C/RISC: int cos(int rs1, int rs2)
+## custom function instruction procedure
+1. Decide on instruction encoding/format in C/RISC: int cos(int rs1, int rs2)
    
-   a. RTYPE: opcode = 0000001, funct7 = 1110000, funct3 = 000
+   a. (placeholder) RTYPE: opcode = 0000001, funct7 = 1110000, funct3 = 000
    
    b. RISCV: `customcos` rd, rs1, rs2
    
@@ -32,6 +32,5 @@ To go from C to IR
 6. Add an ISA pattern that matches the call to `cos` and emits `customcos`
 7. Verify using commands to compile C to IR and C to RISCV
 
-## procedure 2
-- this procedure is for in-built instructions e.g. add not function calls
-- it is a work in progress.
+## questions/concerns
+- haven't been able to generate an executable to verify the encoding is done correctly in hex
