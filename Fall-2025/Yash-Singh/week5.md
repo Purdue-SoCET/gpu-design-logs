@@ -1,5 +1,7 @@
 Design log for this week (sorry for submitting it late I SWEAR I did things this week)
+
 Key goals of this week: start to synthesize uarch across teams 
+
 Roadblocks: None. Most things makes sense. Everything is coming into place. I see the light, the future is bright, and the horizon promises success. Beautiful.
 
 Plans for next week:
