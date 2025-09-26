@@ -32,6 +32,13 @@ To go from C to IR
 6. Add an ISA pattern that matches the call to `cos` and emits `customcos`
 7. Verify using commands to compile C to IR and C to RISCV
 
-## questions/concerns
+## concerns
 - ~~haven't been able to generate an executable to verify the encoding is done correctly in hex~~
    - this has been done with verify_encoding.py and test.hex
+- This took a couple shortcuts:
+- This is using cos and sin as function calls which the parser sees as an external function call when converting to Abstract Syntax Tree (AST)
+   - The IR generates a function call which just gets directly translated into a custom instruction in the backend
+- If we want to add built-in functions we should modify the parser to recognize new syntax
+- We then need to add AST nodes for the new construct and modify semantic analysis for type checking
+- Then we can add code generation for the new AST node
+- This will make our process from IR --> ASM clearer if we need to review it ever
