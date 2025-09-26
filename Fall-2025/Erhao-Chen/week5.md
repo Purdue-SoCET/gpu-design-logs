@@ -9,7 +9,7 @@ statement: I am not stuck.
   - We reviewed the GPU graphics flow as shown in figure. For now, we don't care alpha test and alpha blend since our demo does not require transparency.
 
 ### Work Flow
-- Input Data Structure
+- Data Structure/ Memory list
   - Vector List (3D coordinates) -> all vertex positions (e.g. point [0,0,0], [0,1,2], [0,1,3])
   - Triangle List -> indices into vector list, three vertex will form a triangle(e.g.[0,1,2], [1,2,3]...)
   - Pixel List
