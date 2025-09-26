@@ -19,11 +19,17 @@ Links to readings, annotations, and notes taken this week:
   c. GPU book Chapter 5 Readiings: https://docs.google.com/document/d/1oRuDElZsJe1Lt-ygDqS6sJVZ1vIpwepFmGAylGBdTas/edit?usp=sharing
 
 Summaries for understandings:
+
 KEY MEETINGS:
+
 	1. 19/09/2025 - Friday Meeting to discuss Arch stuff (made questions list from the Compilers Team)
+	
 	2. 21/09/2025 - Sunday Meeting to discuss cross team things such as ISA, RFC(replaced with Register file) implementation
+	
 	3. 22/09/2025 - Monday meeting for project pitch
+	
 	4. 24/09/2025 - Met with Rishi to discuss specific uarch details for compiler managed packet based implementation into the instruction buffer + integration semantics with two level scheduling.
+	
 	5. 25/09/2025 - General Hardware team meeting to discuss uarch, two level scheduling, buffers, and OC usage.
 
 NOTES:
