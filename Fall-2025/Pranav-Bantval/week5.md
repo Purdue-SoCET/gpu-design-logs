@@ -1,4 +1,4 @@
-# Week 3
+# Week 5
 
 State: I am not stuck with anything, don't need help right now. 
 
@@ -33,4 +33,5 @@ To go from C to IR
 7. Verify using commands to compile C to IR and C to RISCV
 
 ## questions/concerns
-- haven't been able to generate an executable to verify the encoding is done correctly in hex
+- ~~haven't been able to generate an executable to verify the encoding is done correctly in hex~~
+   - this has been done with verify_encoding.py and test.hex
