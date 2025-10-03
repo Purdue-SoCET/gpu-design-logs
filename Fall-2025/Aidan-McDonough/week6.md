@@ -6,10 +6,35 @@ I am not currently stuck or blocked.
 
 ## Work Completed
 
+### Design 
+
+**Graphics Flow Diagram**
+<img width="580" height="301" alt="image" src="https://github.com/user-attachments/assets/75549c46-00d1-4870-ad85-3e1acd836414" />
+- Created by Aiden S: [More Details Here](https://github.com/Purdue-SoCET/gpu-design-logs/blob/main/Fall-2025/Aiden-Sexton/week6.md)
+
+**GPU Program Launch**
+- CPU writes to Global CSR (start PC, threadblock num, threadblock size, and total threads) then notifies GPU (interrupts?)
+- GPU notifies CPU at the end of the kenel
+
+**Multiple Thread BLocks**
+- 32 warps, 32 threads per warp -> 1024 threads
+- Can have multiple thread blocks aslong as global thread count isn't > 1024
+	- ex.) 2 thread blocks each with 512 threads  
+
+**ThreadID**
+- CSR
+	- 3 or 1 register seperate for threadID, blockdim, blockID?
+
+**Texture Cache**
+- Not necessarily required for our program (no antialiasing or filtering)
+
+
+
 ### Design Review Presentation
 
 - Discussed structure of presentation
   - Must include hardware requirements, graphic pipeline, graphic library, benchmark program, and design tradeoffs
+  - Design choices/tradeoffs  
 
 |Design| Purpose |Tradeoff|
 | --- | --- | --- |
@@ -75,21 +100,21 @@ I am not currently stuck or blocked.
 	}
 ```
 
-- `stbi_set_flip_vertically_on_load(true)` – flip loaded image so UV (0,0) matches OpenGL’s lower-left.
-- `stbi_load(...)` – load image bytes on the CPU and return width/height/channels.
-- `glGenTextures(1, &texture)` – create a new texture object handle.
-- `glActiveTexture(GL_TEXTURE0)` – select texture unit 0 for subsequent binds/uniforms.
-- `glBindTexture(GL_TEXTURE_2D, texture)` – bind the texture object to the 2D target on the active unit.
-- `glTexParameteri(target, pname, param)` – set sampling (min/mag) and wrapping (S/T) behavior.
-- `glTexImage2D(...)` – allocate GPU storage for the texture and upload pixel data.
-- `glGenerateMipmap(GL_TEXTURE_2D)` – build the full mipmap chain from level 0.
-- `stbi_image_free(bytes)` – free the CPU copy of the pixel data.
-- `glGetUniformLocation(program, "tex0")` – get the location/index of the `sampler2D` uniform.
-- `shaderProgram.Activate()` – make this shader program current (`glUseProgram` under the hood).
-- `glUniform1i(tex0Uni, 0)` – tell the sampler to read from texture unit 0.
-- `glClearColor(r,g,b,a)` – set the color used when clearing the framebuffer.
-- `glClear(GL_COLOR_BUFFER_BIT)` – clear the color buffer to the set clear color.
-- `VAO1.Bind()` – bind vertex array state (attributes, element buffer).
-- `glDrawElements(GL_TRIANGLES, 9, GL_UNSIGNED_INT, 0)` – draw indexed triangles using the bound VAO.
-- `glfwSwapBuffers(window)` – present the rendered frame to the screen.
-- `glfwPollEvents()` – process window/input events.
+- `stbi_set_flip_vertically_on_load(true)` -> flip loaded image so UV (0,0) matches OpenGL’s lower-left.
+- `stbi_load(...)` -> load image bytes on the CPU and return width/height/channels.
+- `glGenTextures(1, &texture)` -> create a new texture object handle.
+- `glActiveTexture(GL_TEXTURE0)` -> select texture unit 0 for subsequent binds/uniforms.
+- `glBindTexture(GL_TEXTURE_2D, texture)` -> bind the texture object to the 2D target on the active unit.
+- `glTexParameteri(target, pname, param)` -> set sampling (min/mag) and wrapping (S/T) behavior.
+- `glTexImage2D(...)` -> allocate GPU storage for the texture and upload pixel data.
+- `glGenerateMipmap(GL_TEXTURE_2D)` -> build the full mipmap chain from level 0.
+- `stbi_image_free(bytes)` -> free the CPU copy of the pixel data.
+- `glGetUniformLocation(program, "tex0")` -> get the location/index of the `sampler2D` uniform.
+- `shaderProgram.Activate()` -> make this shader program current (`glUseProgram` under the hood).
+- `glUniform1i(tex0Uni, 0)` -> tell the sampler to read from texture unit 0.
+- `glClearColor(r,g,b,a)` -> set the color used when clearing the framebuffer.
+- `glClear(GL_COLOR_BUFFER_BIT)` -> clear the color buffer to the set clear color.
+- `VAO1.Bind()` -> bind vertex array state (attributes, element buffer).
+- `glDrawElements(GL_TRIANGLES, 9, GL_UNSIGNED_INT, 0)` -> draw indexed triangles using the bound VAO.
+- `glfwSwapBuffers(window)` -> present the rendered frame to the screen.
+- `glfwPollEvents()` -> process window/input events.
