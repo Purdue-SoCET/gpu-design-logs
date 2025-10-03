@@ -1,4 +1,4 @@
-State: I am not stuck with anythings
+State: I am not stuck with anything
 
 # Progress
 
