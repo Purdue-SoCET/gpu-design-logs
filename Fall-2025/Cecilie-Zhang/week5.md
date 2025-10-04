@@ -44,6 +44,16 @@
     8. If an arbiter encounters a miss, the missed addresses will be sent to the PRT and information about block address, block offset and restination register is kept in the table. The PRT then sends a memory request to the MMU (Memory management Unit) which is conencted to the L2 cache. The request contains which memory address to access, and how many bytes to read, as well as a "subid" field. Once the MMU has found the data back, the data is placed in the Fill Unit. The fill unit uses the "subid" field to request the information about the data from the PRT. 
     9. The Fill Unit uses the information from PRT and finds the corresponding bank and row and writes back the data to the cache. It then puts the memory request back to the L/S buffer and tells the arbiter to replay the instruction (**Q4**)
 
+# Meeting (Thursday):
+- Packet for each warp. Within a packet, there's no dependencies, the warp can schedule the instructions in any order
+- 3 states associated with each warp: 
+    1. Ready but not accepted (Waiting state)
+    2. Ready and accepted (Active state)
+    3. Not ready (Variable-latency instructions)
+- Warp scheduler pulls warps to the active poll and increments the pc for these active warps
+- The scheduler keeps track of the yield bit and makes sure that no instructions that depend on previous ones is issued and that warp is placed in the pending state
+- Instruction buffer is for when the throughput for input and output vary
+
 
 - Contains diagrams of previous NVIDIA cache organization
 https://patentimages.storage.googleapis.com/7d/ac/a2/42928db1f37114/US8266383.pdf
