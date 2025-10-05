@@ -43,3 +43,7 @@ Opperand Collector
 
 See presentation for more detail:
 https://docs.google.com/presentation/d/1Is6HNChVRcIMx3nnyw-dslQUPmFsOYvEmtePV2tYh2k/edit?slide=id.g38919b77428_0_0#slide=id.g38919b77428_0_0
+
+"Deliverables"
+- RTL diagrams of MRF, RFC, and Register File Hierarchy + frontend connections
+- A ton of discussion within hardware team 
