@@ -1,0 +1,49 @@
+Status: Need to know ISA (opcodes of instruction), environment (makefile, what python compiler, how to stream an assembly file or binary code)
+
+Notes taken during Thursday meeting:
+Each class will have "functional unit" class, which defines what it does and "cycle".
+ex: FPU ext FU: 
+cycle() //a global class that states how many cycles it runs/latency of instructions. Also pushes value forward in pipeline. Say, 7clk FU, and cycle() would push the inputs and execute
+NOTE: program will be declared with FU/writeback stuff first, to prevent fetching/decoding stuff from being overwritten
+the "deepest" pipeline stage will be executed
+"writeback" will be a seperate module from the FPU class, which you can bundle into a new class containing the FPU and the writeback, that writeback would be passed into another class 
+500 MHz on 90 nm
+Emulation will be u[Seth], me, andrew, aditya, and Daniel 
+Emulation we dont need to worry about hardware details, basically input instruction output writing to register files/memory
+
+Ideas:
+Have an "instruction" class, which can make debugging and general implementation of both emulation and simulation easier.
+  - See what's reusable from Summer_RISCV repo
+  - Probably have dict/hash tables for converting op to instr, which can be easily changed. 
+
+Questions:
+Will the emulation just have input instruction/binary and output FU writeback? Or will there be a register file as well? (probably the latter)
+How will tesbenching, debugging, and all that work with Python? Will we just rely on compiler team's code? Will we write python testbenches? [Maybe take some stuff from my cocotb constrained random verification]
+
+Deliverables:
+Made a wavedrom of MRF + RFC, since some of the frontend guys said that there may be a problem for when one instruction has both a register from the RFC and MRF. 
+This is based on the critical assumption (given to us by the GTAs) that bank conflicts must occur, and that instruction operand issues (between warps) are issued 1 clk cycle apart as a result
+
+Wavedrom code:
+// Main RF: r12-r63. RFC: r4-r11
+// even: add x1, r12, r4		add x1, MRF, RFC
+// odd:  add x1, r13, r5		add x1, MRF, RFC
+// even: add x2, r6, r7 		add x2, RFC, RFC
+// odd:  add x2, r8, r9			add x2, RFC, RFC
+// "Both operands (of one instruction?) on the same cycle?"
+// This will never happen, because accesses of one instruction's two operands will always occur in 2 clk cycles. 
+// Specifically, B0/even warps will occur one clk before B1/odd warps
+// Even if both x2 and x3 take from RFC, these accesses will occur across 2 clk cycles.
+{signal: [
+  {name: 'clk', wave: 'p.........'},
+  {name: "instr", wave:"x2..0.2..0", data:["add x1, r12, r4 and add x1, r13, r5", "add x2, r6, r7 and add x2, r8, r9"]},
+  {name: 'B0_rs_MRF', wave:"x220..550..", data:["r12", "NOP", "NOP", "NOP"]},
+  {name: 'B0_rs_RFC', wave:"x330..440", data:["NOP","r4","r6", "r7"]},
+  {name: 'B1_rs_MRF', wave:"xx440..660", data:["r13", "NOP", "NOP", "NOP"]},
+  {name: 'B1_rs_RFC', wave:"xx550..770.", data:["NOP","r5", "r8", "r9"]},
+  {name: 'OC0', wave:"x230..44", data:["even_rdat1", "even_rdat2", "even_rdat1", "even_rdat2"]},
+  {name: 'OC1', wave:"x.450..77", data:["odd_rdat1", "odd_rdat2", "odd_rdat1", "odd_rdat2"]}, 
+  //{name: 'FU_Out', wave:"x.....77", data:["even_wb", "odd_wb"]}
+],
+config: { hscale: 2 }}
+
