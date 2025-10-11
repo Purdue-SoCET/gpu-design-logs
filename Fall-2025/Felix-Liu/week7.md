@@ -47,3 +47,5 @@ Wavedrom code:
 ],
 config: { hscale: 2 }}
 
+<img width="1104" height="303" alt="RFC + MRF wavdrom" src="https://github.com/user-attachments/assets/1bd92b01-40a9-44d8-bc53-1a66b4733d12" />
+
