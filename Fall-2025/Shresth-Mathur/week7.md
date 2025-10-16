@@ -4,7 +4,10 @@
 
 * In our gpgu-sim\_distribution repo, cloned the “working\_heuristic” branch  
   * Command:   
-    * git clone \-b working\_heuristic –single-branch git@github.com:Purdue-SoCET/gpgpu-sim\_distribution.git  
+    * git clone \-b working\_heuristic –single-branch git@github.com:Purdue-SoCET/gpgpu-sim\_distribution.git
+* Akshath and Zohaib need to install CUDA (running into some problems)
+    * Look at Daniel Choi's early GPU team design logs from Spring 2025 to learn how to do this
+    * Single design log contians all of the necessary info (step-by-step commands to install it)
 * This branch contains correct and incorrect code:  
   * Heuristic works  
   * Top-level round robin scheduling scheme works  
