@@ -6,11 +6,11 @@ Big thing->emulator is functionally complete! Actually we don’t truly know if 
 
 This is what the instruction file format looks like 
 
-![media/image13.png](image13.png)
+![image13.png](media/image13.png)
 
 Hex encoding #{bitwise translation} {assembly instruction}
 
-![media/image14.png](image14.png)
+![image14.png](media/image14.png)
 
 The setup is a lot like the 437 flow, where we have a simulated memory with the instructions and we log the nonzero contents of memory into another file.
 
