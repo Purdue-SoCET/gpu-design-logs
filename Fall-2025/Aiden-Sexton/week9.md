@@ -35,4 +35,5 @@ State: I am not stuck with anything
   * interpolcate -> Interpolate a point between 3 vertexs
 
 ### Update on our software library
-* Need 
+* Do **NOT** need a CPU side library akin to something like openGL
+* Only need the GPU side kernels to later be integrated into a CPU side library
