@@ -32,11 +32,6 @@
 - How to change the IR generator for our architecture
 - Especially for AST to IR conversion
 
-## Compiler Chat 10/21, Tuesday
-- Floating points comparison
-  - We don't have it right now
-  - Not sure if graphics need it
-
 ## Compiler thoughts
 - To analyze control flow, we can find a graphic tool to generate control flow
 - In ECE468 Compiler, basic blocks are defined as:
