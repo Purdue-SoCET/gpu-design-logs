@@ -35,6 +35,11 @@ I am not currently stuck or blocked.
         = \dfrac{1}{w}
         \begin{bmatrix} uw \\ vw \end{bmatrix}$
         - $ l = \dfrac{1}{w} $
+     
+        - LaTEX won't display on Github so heres the image:
+     
+      <img width="700" height="260" alt="image" src="https://github.com/user-attachments/assets/cc7610bc-8c53-45de-a938-42e1f05dedb5" />
+
 
 ### Next Steps:
  - Rework vertex kernel 
