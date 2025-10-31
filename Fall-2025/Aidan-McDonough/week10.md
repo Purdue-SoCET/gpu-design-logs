@@ -39,5 +39,7 @@ I am not currently stuck or blocked.
 ### Next Steps:
  - Rework vertex kernel 
  - Connect final kernel output to openGL draw pixels to render image to screen
+    - incorporate into main function
+    - use for debug and confirm functionailty before on cpusim before functsim
  - Debug kernels to confirm correct operation 
 
