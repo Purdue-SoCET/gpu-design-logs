@@ -1,0 +1,186 @@
+`include "cache_types_pkg.svh";
+
+module lockup_free_cache (
+    input logic CLK, nRST,
+
+    //* Valid signal from datapath telling cache there's a valid memory request
+    input logic mem_in,
+    //* Address from datapath to cache
+    input logic [31:0] mem_in_addr,
+    //* RW Mode from datapath to cache
+    input logic mem_in_rw_mode, // 0 = read, 1 = write
+    //* Store value from datapath to cache
+    input logic [31:0] mem_in_store_value,
+
+    //* Halt signal from the datapath
+    input logic dp_in_halt, 
+
+    //* The uuid for the sent data to LSU
+    output logic [3:0] mem_out_uuid,
+    //* The stall signal from cache if MSHR buffer is full
+    output logic stall,
+    //* Hit from the cache
+    output logic hit,
+    //* The data for the hit read request
+    output logic [31:0] hit_load,
+    //! Keeps track of the MSHR buffer for bank
+    output logic [NUM_BANKS-1:0] block_status,
+    //! The set of UUIDs for each bank
+    output logic [NUM_BANKS-1:0][UUID_SIZE-1:0] uuid_block,
+    //* Flushed signal to the datapath
+    output logic dp_out_flushed,
+
+    // RAM Signals
+    //* REN signal to main memory
+    output logic [NUM_BANKS-1:0] ram_mem_REN,
+    //* WEN signal to main memory
+    output logic [NUM_BANKS-1:0] ram_mem_WEN,
+    //* The address that contains the data that wants to be fetched from main memory
+    output logic [NUM_BANKS-1:0][31:0] ram_mem_addr,
+    //* The data that wants to be stored back to main memory (dirty data or flushed)
+    output logic [NUM_BANKS-1:0][31:0] ram_mem_store,
+    //* The data from main memory to cache
+    input logic [NUM_BANKS-1:0][31:0] ram_mem_data,
+    //* Complete signal from main memory to cache
+    input logic [NUM_BANKS-1:0] ram_mem_complete
+);
+
+    //* in_mem_instr = {addr (tag, index, block_offset, byte_offset), rw_mode, store_value}
+    in_mem_instr hit_check_instr;
+    //* Signals a bank to conduct a tag check for hit or miss
+    logic [NUM_BANKS-1:0] hit_check;
+
+    //* Assigning the incoming valid memory request to different fields of the hit_check_instr struct
+    assign hit_check_instr.addr = addr_t'(mem_in_addr);
+    assign hit_check_instr.rw_mode = mem_in_rw_mode;
+    assign hit_check_instr.store_value = mem_in_store_value;
+    
+    //* Keeps track of the miss for each bank
+    logic [NUM_BANKS-1:0] miss;
+    //* Make an in_mem_instr struct for new misses
+    in_mem_instr new_miss;
+    //!
+    logic internal_halt_banks; 
+    //* Keeps track of which bank hits
+    logic [NUM_BANKS-1:0] bank_hit;
+    //! Keeps track of which banks to stall (due to MSHR buffer)
+    logic [NUM_BANKS-1:0] bank_stall;
+    //! Keeps track of which banks are busy 
+    logic [NUM_BANKS-1:0] bank_busy;
+    //! Which MSHR buffer is empty for each cache
+    logic [NUM_BANKS-1:0] buffer_empty;
+    //! Which banks have been flushed
+    logic [NUM_BANKS-1:0] internal_flushed_banks;
+    //! Array that keeps track of the data returned from banks that hit
+    logic [NUM_BANKS-1:0][31:0] hit_return_load;
+    //! Array of UUIDs for each bank
+    logic [NUM_BANKS-1:0][UUID_SIZE-1:0] bank_uuids;
+    
+    //* The MSHR buffer for each bank
+    mshr_reg [NUM_BANKS-1:0] mshr_out;
+
+    //* Bus for indexing into each bank
+    logic [BANKS_LEN-1:0] bank_id;
+    //* Gets the index to the specific bank that the incoming request wants to access
+    assign bank_id = (mem_in_addr >> (BYTE_OFF_BIT_LEN + BLOCK_OFF_BIT_LEN)) & (NUM_BANKS - 1);
+    
+    //* The incoming reqeust could be a miss. Not sure until it checks tag. Assign in to the new_miss first.
+    assign new_miss.addr = addr_t'(mem_in_addr);
+    assign new_miss.rw_mode = mem_in_rw_mode;
+    assign new_miss.store_value = mem_in_store_value;
+
+    //* If every MSHR buffer in every bank is empty and datapath has asserted halt, assert internal_halt_banks
+    assign internal_halt_banks = (&buffer_empty) && dp_in_halt; 
+    //* If every banks has flushed and all dirty data has been written back to main memory, tell datapath that cache has been flushed
+    assign dp_out_flushed = (&internal_flushed_banks);
+    
+    genvar i;
+    generate
+        for (i = 0; i < NUM_BANKS; i++) begin : BANK_GEN
+            //* Generate a MSHR buffer for every bank
+            cache_mshr_buffer mshr_buffer_i (
+                //? INPUTS
+                .CLK           (CLK),
+                .nRST          (nRST),
+                .bank_id       (BANKS_LEN'(i)),
+                //* Signals the MSHR that it's a miss request
+                .miss          (miss[i]),
+                //* The missed request
+                .mem_instr     (new_miss),
+                //* The bank is busy getting data from RAM or writing to RAM
+                .bank_empty    (!bank_busy[i]),
+
+                //? OUTPUTS
+                //* The MSHR entry
+                .mshr_out      (mshr_out[i]),
+                .stall         (bank_stall[i]),
+                //* UUID for the missed request to LSU
+                .uuid_out      (bank_uuids[i]), 
+                //* Used for internal halt signal
+                .buffer_empty  (buffer_empty[i])
+            );
+            //* Generate NUM_BANKS number of cache banks
+            cache_bank u_cache_bank (
+                //? INPUTS
+                .CLK                   (CLK),
+                .nRST                  (nRST),
+                .bank_id               (BANKS_LEN'(i)),
+                // for requesting RAM
+                .instr_valid           (hit_check[i]),
+                // valid single-cycle request 
+                .ram_mem_data          (ram_mem_data[i]),
+                // data incoming from RAM
+                .mshr_entry            (mshr_out[i]),
+                .mem_instr_in          (hit_check_instr),
+                .ram_mem_complete      (ram_mem_complete[i]),
+                .halt                  (internal_halt_banks),
+
+                //? OUTPUTS
+                // RAM completed operation
+                .cache_bank_busy       (bank_busy[i]),
+                // High when MSHR in-flight
+                .scheduler_hit         (bank_hit[i]),
+                .ram_mem_REN           (ram_mem_REN[i]),
+                .ram_mem_WEN           (ram_mem_WEN[i]),
+                .ram_mem_store         (ram_mem_store[i]),
+                .ram_mem_addr          (ram_mem_addr[i]),
+                .scheduler_data_out    (hit_return_load[i]),
+                .scheduler_uuid_out    (uuid_block[i]),
+                .scheduler_uuid_ready  (block_status[i]), 
+                .flushed               (internal_flushed_banks[i])
+            );
+        end
+    endgenerate
+
+    always_comb begin
+        //* Default output for each bank
+        miss = 0;
+        stall = 0;
+        hit = 0;
+        hit_load = 0;
+        hit_check = 0;
+        mem_out_uuid = '0; 
+
+        //* If the incoming request is valid and the request misses in the corresponding bank, set the miss bit for that bank high
+        if (bank_hit == '0 && mem_in) begin
+            miss[bank_id] = 1;
+        end
+        //! If any banks are stalling, stall the entire cache
+        if (bank_stall != 0) begin
+            stall = 1;
+        end
+        for (int j = 0; j < NUM_BANKS; j++) begin
+        //* if the request is valid and it hits in any of the banks, tell LSU that it hits and give it the data
+            if (bank_hit[j] && mem_in) begin
+                hit = 1;
+                hit_load = hit_return_load[j];
+            end
+        end
+
+        //* Signal the specific bank to do a tag lookup to determine if the current request hits or misses
+        hit_check[bank_id] = 1;
+        //* Sending out the UUID for the specific request so that LSU knows which UUID missed 
+        mem_out_uuid = bank_uuids[bank_id];
+    end
+
+endmodule
