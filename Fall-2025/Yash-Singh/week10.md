@@ -10,3 +10,7 @@ MEETINGS THIS WEEK:
   -     Simplify stage interfaces
   -     Probably need some kind of universal buffer class
   -     Everyone has to handle backpressure individually.
+
+WORK FOR THIS WEEK:
+- Fixing what we have for the func sim so far individually iven the new structure
+- Consolidate findings on Sunday.
