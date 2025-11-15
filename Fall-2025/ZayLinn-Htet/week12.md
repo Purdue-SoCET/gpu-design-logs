@@ -1,4 +1,4 @@
-# Week 11 Design Log
+# Week 12 Design Log
 ## 11/07/25 - 11/13/25
 I am not currently stuck or blocked
 
@@ -138,4 +138,5 @@ I am not currently stuck or blocked
 - Car is still one module; but imagine orderrs of magnitudes of interconnects to it; customization stage
 - A lot of Thermal Management now; over-clocking and will cause overheating astronomically
 - 50% of energy that goes into the system leaves as heat
+
 - Validation EDA Tools hasn't been made because structure hasn't been perfected
