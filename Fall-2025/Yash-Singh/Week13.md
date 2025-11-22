@@ -1,3 +1,5 @@
+Help needed? not yet. happy thanksgiving.
+
 Summary:
 
 This week was focused on catchign up for the design/code review that happened this past Sunday. i
@@ -17,5 +19,5 @@ Evidence of Work:
 - Research Conference Poster: https://purdue0-my.sharepoint.com/:p:/g/personal/ee_purdue_edu/EWOFayCiJB5NskunwBJd_a0B5nyZWuc_sXyo6mbYh0eodg?e=uf8lyI
 - FuncSim test structure:
 - <img width="1111" height="859" alt="sd_review_2 flow diagram drawio" src="https://github.com/user-attachments/assets/464a6d2d-2000-4d02-99aa-06f9036725fb" />
-
+- See slides for more relevant information.
 
