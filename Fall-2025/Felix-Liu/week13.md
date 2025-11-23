@@ -5,4 +5,6 @@ Status: not stuck
 - Testing and debugging saxby.asm. Currently, the program doesn't actually predicate correctly!
     - PC goes to branch PC rather than PC + 4 and predicating.
 - Fixed predication logic and halt_count (number of halted warps) logic. Currently trying to figure out what software is doing that
-is resulting in an integer overflow for a LW? 
+is resulting in an integer overflow for a LW?
+ERROR FOUND: Currently emulator assumes blockdim of 1024 and gridsize of 1. This results in saxpy.asm trying to load from MEM[0] for warp=0, global_thread_id=0.
+This would be the CSRR instruction, which coincidentally happens to cause an integer overflow. Thus, I believe it is a software bug.
