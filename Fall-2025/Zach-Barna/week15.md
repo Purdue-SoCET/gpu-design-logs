@@ -1,0 +1,7 @@
+# Week 15 Design Log
+## Explicit Statement: I am not stuck or blocked.
+## Progress
+No progress from me this week on the funcsim, the end of the semester currently is incredibly hectic and so I have not had any time to work on the sim with all of the deadlines that were due this week + deadlines that are due next week. The main GPU work I did this week was for the presentation we had on Wednesday, 12/3, and trying to make it look very nice, as well as providing as much possible useful information while keeping the presenation concise and followable for an audience of any knowledge level on GPUs.
+
+## Next Steps
+Since we are pushing the funcsim to the side for now, my main focus is going to be to work on the final report, and then once the final report looks really good and we are happy with it, then Kai Ze and I will form the list of robust unit tests that we need to run on the Issue stage to make sure it is completely ready for full FE + BE integration. We also need to incorporate an issuing policy in the event that the upstream is stalled (icache miss). I talked about this in my last design log, but haven't really had any time to figure out what this policy will look like. I imagination it will be some sort of round robin arbitration for iBuffers that hold valid instructions, but we will need to look further into this.
