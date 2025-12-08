@@ -1,0 +1,22 @@
+# Explicit Statement: I am not stuck
+
+- Did not do much journaling, but progress is significant:  
+  - All scheduler modifications done  
+    - RR top level scheduler done  
+    - Elected thread scheduler done  
+    - Warp scheduler also done  
+      - **Currently the code results in a deadlock** because warp cannot issue instructions past the RPC, but scalar core incomplete so scalarized threads will never be returned to the SIMT core  
+        - This is **PERFECT behavior**  
+  - Akshath made significant advances in the scalar core code  
+    - Most of the code seems to be there for base scalar core  
+    - Even code for the TTM structures are there  
+    - Akshath said the scalar core segfaults  
+- Current goal:  
+  - Get scalar core working and then the TTM structures  
+  - Write a final report, due **12/12 @ 5 PM\!**  
+    - 6-7 pages (30% background/arch., 70% code explanation/justification)  
+- Steps to achieve goals:  
+  - Going to review Akshath’s code with Hassan and see if we can debug it  
+    - 12/8 at 3:30PM  
+  - Going to work on final report all week and leave the TTM and scalar core code out of it for now in case we make significant progress/changes to the code  
+- One downside is that since it’s close to finals week, everyone has less time to work
